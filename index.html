@@ -904,26 +904,35 @@ function stopRecording() {
 function playRecording() {
   if(!audioElement) return;
   const playBtn = document.getElementById('playBtn');
+  if(!playBtn) return;
   
   if(audioElement.paused) {
     audioElement.currentTime = 0;
-    audioElement.play();
-    playBtn.textContent = '⏸';
+    audioElement.play().catch(e => console.log('Play error:', e));
+    playBtn.innerHTML = '⏸';
     
     // Progress bar
     const progressUpdate = setInterval(() => {
-      if(audioElement.paused) { clearInterval(progressUpdate); playBtn.textContent = '▶'; document.getElementById('waveProgress').style.width = '0%'; return; }
-      const pct = (audioElement.currentTime / audioElement.duration) * 100;
-      document.getElementById('waveProgress').style.width = pct + '%';
+      if(!audioElement || audioElement.paused) {
+        clearInterval(progressUpdate);
+        if(playBtn) playBtn.innerHTML = '▶';
+        const wp = document.getElementById('waveProgress');
+        if(wp) wp.style.width = '0%';
+        return;
+      }
+      const pct = audioElement.duration ? (audioElement.currentTime / audioElement.duration) * 100 : 0;
+      const wp = document.getElementById('waveProgress');
+      if(wp) wp.style.width = pct + '%';
     }, 100);
     
     audioElement.onended = () => {
-      playBtn.textContent = '▶';
-      document.getElementById('waveProgress').style.width = '0%';
+      if(playBtn) playBtn.innerHTML = '▶';
+      const wp = document.getElementById('waveProgress');
+      if(wp) wp.style.width = '0%';
     };
   } else {
     audioElement.pause();
-    playBtn.textContent = '▶';
+    playBtn.innerHTML = '▶';
   }
 }
 
