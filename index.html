@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VIVOgift — Crea tu regalo</title>
-<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -101,10 +103,12 @@ button{font-family:var(--fb);cursor:pointer}
 
 /* 3D VIEWER */
 .viewer-3d{width:100%;max-width:500px;aspect-ratio:1/1;border-radius:var(--r);overflow:hidden;background:var(--bg);position:relative;z-index:1}
-model-viewer{width:100%;height:100%;--poster-color:transparent;outline:none}
-model-viewer::part(default-progress-bar){background:var(--lime);height:3px}
+.viewer-3d canvas{width:100%!important;height:100%!important;outline:none;cursor:grab}
+.viewer-3d canvas:active{cursor:grabbing}
 .viewer-label{text-align:center;font-size:10px;color:var(--text3);margin-top:8px}
 .viewer-label span{color:var(--lime)}
+.viewer-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:5}
+.viewer-loading .lring{width:40px;height:40px;border:3px solid #ffffff08;border-top-color:var(--lime);border-radius:50%;animation:sp 1s linear infinite}
 
 /* RESULT PANEL (below 3D) */
 .result-panel{width:100%;max-width:500px;margin-top:16px;z-index:1}
@@ -295,26 +299,9 @@ model-viewer::part(default-progress-bar){background:var(--lime);height:3px}
 
 <!-- MAIN -->
 <div class="main">
-  <!-- 3D VIEWER / PRODUCT IMAGE -->
-  <div class="viewer-3d">
-    <model-viewer
-      id="mv"
-      src="https://rtjgcpklpyolzsdjjtdb.supabase.co/storage/v1/object/public/assets/cenicero.glb"
-      alt="Producto 3D"
-      auto-rotate
-      camera-controls
-      touch-action="pan-y"
-      shadow-intensity="0.8"
-      exposure="1.1"
-      environment-image="neutral"
-      camera-orbit="30deg 75deg 2.5m"
-      min-camera-orbit="auto auto 1.5m"
-      max-camera-orbit="auto auto 5m"
-      style="background:transparent"
-    >
-      <div slot="progress-bar"></div>
-    </model-viewer>
-    <img id="fallbackImg" src="" alt="" style="display:none;width:100%;height:100%;object-fit:contain;padding:20px" crossorigin="anonymous">
+  <!-- 3D VIEWER (Three.js) -->
+  <div class="viewer-3d" id="viewer3d">
+    <div class="viewer-loading" id="viewerLoading"><div class="lring"></div></div>
   </div>
   <div class="viewer-label">Mueve el producto con el ratón · <span>Modelo 3D real</span></div>
 
@@ -367,7 +354,7 @@ const PRODUCTS = [
     zones: [{id:'tapa',name:'Tapa',icon:'⬆',default:true},{id:'bordes',name:'Bordes',icon:'◯'}],
     promptCtx: 'circular design for the lid of a portable car ashtray',
     // Mockup overlay position (CSS: top, left, width, height, borderRadius)
-    mockup: {top:'8%',left:'22%',width:'56%',height:'35%',borderRadius:'50%'}
+    mockup: {top:'8%',left:'22%',width:'56%',height:'35%',borderRadius:'50%',transform:'perspective(400px) rotateX(55deg)'}
   },
   {
     id: 'mechero',
@@ -377,7 +364,7 @@ const PRODUCTS = [
     glb: SUPABASE_STORAGE + '/mechero.glb',
     zones: [{id:'cuerpo',name:'Cuerpo',icon:'▮',default:true}],
     promptCtx: 'design for the flat rectangular side panel of a metallic lighter',
-    mockup: {top:'15%',left:'30%',width:'40%',height:'55%',borderRadius:'4px'}
+    mockup: {top:'15%',left:'30%',width:'40%',height:'55%',borderRadius:'4px',transform:'perspective(400px) rotateY(-5deg)'}
   },
   {
     id: 'grinder',
@@ -387,7 +374,7 @@ const PRODUCTS = [
     glb: SUPABASE_STORAGE + '/grinder.glb',
     zones: [{id:'tapa_sup',name:'Tapa superior',icon:'⬆',default:true},{id:'tapa_inf',name:'Tapa inferior',icon:'⬇'},{id:'bordes',name:'Bordes',icon:'◯'}],
     promptCtx: 'circular design for the flat wooden top of a grinder',
-    mockup: {top:'5%',left:'15%',width:'70%',height:'40%',borderRadius:'50%'}
+    mockup: {top:'5%',left:'15%',width:'70%',height:'40%',borderRadius:'50%',transform:'perspective(400px) rotateX(30deg)'}
   },
   {
     id: 'posavasos',
@@ -397,7 +384,7 @@ const PRODUCTS = [
     glb: SUPABASE_STORAGE + '/portavaso.glb',
     zones: [{id:'cara_sup',name:'Cara superior',icon:'⬆',default:true},{id:'cara_inf',name:'Cara inferior',icon:'⬇'}],
     promptCtx: 'circular design for a round coaster surface',
-    mockup: {top:'18%',left:'10%',width:'50%',height:'40%',borderRadius:'50%'}
+    mockup: {top:'18%',left:'10%',width:'50%',height:'40%',borderRadius:'50%',transform:'perspective(400px) rotateX(45deg)'}
   }
 ];
 
@@ -449,6 +436,7 @@ async function init() {
   renderStyles();
   renderZones();
   setupUpload();
+  initThreeJS();
   
   // Load API keys from Supabase
   try {
@@ -489,23 +477,226 @@ function selProduct(id) {
   renderProducts();
   renderZones();
   
-  // Update 3D viewer
-  const mv = document.getElementById('mv');
+  // Load 3D model
   if(S.product.glb) {
-    mv.src = S.product.glb;
-    mv.style.display = '';
-    document.getElementById('fallbackImg').style.display = 'none';
+    load3DModel(S.product.glb);
     document.querySelector('.viewer-label').innerHTML = `Mueve el producto con el ratón · <span>Modelo 3D real</span>`;
-  } else {
-    mv.style.display = 'none';
-    const fb = document.getElementById('fallbackImg');
-    fb.src = S.product.img;
-    fb.style.display = 'block';
-    document.querySelector('.viewer-label').innerHTML = `${S.product.name} · <span>Foto real</span>`;
   }
   
   // Hide result panel
   document.getElementById('resultPanel').style.display = 'none';
+  // Remove design overlay
+  currentDesignTexture = null;
+  if(currentModel) applyTextureToModel(currentModel, null);
+}
+
+// ═══════════════════════════════════
+// THREE.JS 3D ENGINE
+// ═══════════════════════════════════
+let threeScene, threeCamera, threeRenderer, threeControls;
+let currentModel = null;
+let currentDesignTexture = null;
+let originalMaterials = new Map();
+
+function initThreeJS() {
+  const container = document.getElementById('viewer3d');
+  const w = container.clientWidth;
+  const h = container.clientHeight;
+  
+  // Scene
+  threeScene = new THREE.Scene();
+  threeScene.background = new THREE.Color(0x080808);
+  
+  // Camera
+  threeCamera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+  threeCamera.position.set(0, 1.5, 3);
+  
+  // Renderer
+  threeRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  threeRenderer.setSize(w, h);
+  threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  threeRenderer.outputEncoding = THREE.sRGBEncoding;
+  threeRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+  threeRenderer.toneMappingExposure = 1.2;
+  threeRenderer.shadowMap.enabled = true;
+  container.appendChild(threeRenderer.domElement);
+  
+  // Controls
+  threeControls = new THREE.OrbitControls(threeCamera, threeRenderer.domElement);
+  threeControls.enableDamping = true;
+  threeControls.dampingFactor = 0.05;
+  threeControls.autoRotate = true;
+  threeControls.autoRotateSpeed = 2;
+  threeControls.minDistance = 1;
+  threeControls.maxDistance = 8;
+  threeControls.target.set(0, 0.5, 0);
+  
+  // Lights
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+  threeScene.add(ambientLight);
+  
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+  dirLight.position.set(3, 5, 3);
+  dirLight.castShadow = true;
+  threeScene.add(dirLight);
+  
+  const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+  dirLight2.position.set(-3, 3, -2);
+  threeScene.add(dirLight2);
+  
+  const rimLight = new THREE.DirectionalLight(0xe8ff47, 0.15);
+  rimLight.position.set(0, -2, -3);
+  threeScene.add(rimLight);
+  
+  // Resize
+  window.addEventListener('resize', () => {
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+    threeCamera.aspect = w / h;
+    threeCamera.updateProjectionMatrix();
+    threeRenderer.setSize(w, h);
+  });
+  
+  // Animate
+  function animate() {
+    requestAnimationFrame(animate);
+    threeControls.update();
+    threeRenderer.render(threeScene, threeCamera);
+  }
+  animate();
+  
+  // Load first product
+  load3DModel(S.product.glb);
+}
+
+function load3DModel(url) {
+  if(!url) return;
+  
+  // Show loading
+  const loading = document.getElementById('viewerLoading');
+  if(loading) loading.style.display = 'flex';
+  
+  // Remove old model
+  if(currentModel) {
+    threeScene.remove(currentModel);
+    currentModel = null;
+    originalMaterials.clear();
+  }
+  
+  const loader = new THREE.GLTFLoader();
+  loader.load(url, 
+    (gltf) => {
+      const model = gltf.scene;
+      
+      // Center and scale model
+      const box = new THREE.Box3().setFromObject(model);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const scale = 2.0 / maxDim;
+      model.scale.setScalar(scale);
+      model.position.sub(center.multiplyScalar(scale));
+      model.position.y -= (box.min.y * scale);
+      
+      // Store original materials for reset
+      model.traverse((child) => {
+        if(child.isMesh && child.material) {
+          originalMaterials.set(child.uuid, child.material.clone());
+        }
+      });
+      
+      threeScene.add(model);
+      currentModel = model;
+      
+      // If there's already a design, apply it
+      if(currentDesignTexture) {
+        applyTextureToModel(model, currentDesignTexture);
+      }
+      
+      // Reset camera
+      threeControls.target.set(0, size.y * scale * 0.4, 0);
+      threeCamera.position.set(0, size.y * scale * 0.8, 3);
+      threeControls.update();
+      
+      // Hide loading
+      if(loading) loading.style.display = 'none';
+      console.log('✦ 3D model loaded:', url.split('/').pop());
+    },
+    (progress) => {
+      // Loading progress
+      if(progress.total) {
+        const pct = Math.round((progress.loaded / progress.total) * 100);
+        console.log(`Loading 3D: ${pct}%`);
+      }
+    },
+    (error) => {
+      console.error('3D load error:', error);
+      if(loading) loading.style.display = 'none';
+      toast('Error cargando modelo 3D', 'err');
+    }
+  );
+}
+
+function applyTextureToModel(model, texture) {
+  if(!model) return;
+  
+  model.traverse((child) => {
+    if(child.isMesh && child.material) {
+      if(texture) {
+        // Apply design texture
+        child.material = child.material.clone();
+        child.material.map = texture;
+        child.material.needsUpdate = true;
+      } else {
+        // Restore original
+        const orig = originalMaterials.get(child.uuid);
+        if(orig) {
+          child.material = orig.clone();
+          child.material.needsUpdate = true;
+        }
+      }
+    }
+  });
+}
+
+// Called when design is generated
+function applyDesignTo3D(imageUrl) {
+  if(!imageUrl || !currentModel) {
+    currentDesignTexture = null;
+    return;
+  }
+  
+  const texLoader = new THREE.TextureLoader();
+  texLoader.crossOrigin = 'anonymous';
+  texLoader.load(imageUrl, 
+    (texture) => {
+      texture.encoding = THREE.sRGBEncoding;
+      texture.flipY = false;
+      currentDesignTexture = texture;
+      applyTextureToModel(currentModel, texture);
+      console.log('✦ Design texture applied to 3D model');
+    },
+    undefined,
+    (err) => {
+      console.error('Texture load error:', err);
+      // Try with a canvas-based approach for cross-origin images
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        canvas.getContext('2d').drawImage(img, 0, 0);
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.encoding = THREE.sRGBEncoding;
+        tex.flipY = false;
+        currentDesignTexture = tex;
+        applyTextureToModel(currentModel, tex);
+        console.log('✦ Design texture applied via canvas fallback');
+      };
+      img.src = imageUrl;
+    }
+  );
 }
 
 // ═══════════════════════════════════
@@ -768,6 +959,9 @@ function showResult() {
   const p = S.product;
   const m = p.mockup;
   
+  // Also overlay design on 3D viewer
+  applyDesignTo3D(S.result);
+  
   panel.style.display = 'block';
   panel.innerHTML = `<div class="fadein">
     <div class="res-label">✦ Tu diseño personalizado</div>
@@ -779,12 +973,13 @@ function showResult() {
         <div class="res-img"><div class="glow"></div><img src="${S.result}" style="position:relative;z-index:1;border-radius:var(--r)"></div>
       </div>
       <div>
-        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-family:var(--fd);font-weight:700">Así queda en tu producto</div>
+        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-family:var(--fd);font-weight:700">Mockup del producto</div>
         <div style="position:relative;border-radius:var(--r);overflow:hidden;background:var(--bg);aspect-ratio:1/1">
-          <img src="${p.img}" style="width:100%;height:100%;object-fit:contain;position:relative;z-index:2" crossorigin="anonymous">
-          <div style="position:absolute;top:${m.top};left:${m.left};width:${m.width};height:${m.height};z-index:1;border-radius:${m.borderRadius};overflow:hidden;opacity:.85">
+          <img src="${p.img}" style="width:100%;height:100%;object-fit:contain;position:relative;z-index:2;mix-blend-mode:luminosity;opacity:.4" crossorigin="anonymous">
+          <div style="position:absolute;top:${m.top};left:${m.left};width:${m.width};height:${m.height};z-index:3;border-radius:${m.borderRadius};overflow:hidden;transform:${m.transform||'none'};box-shadow:0 2px 12px #0008">
             <img src="${S.result}" style="width:100%;height:100%;object-fit:cover" crossorigin="anonymous">
           </div>
+          <img src="${p.img}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:4;mix-blend-mode:screen;opacity:.35;pointer-events:none" crossorigin="anonymous">
         </div>
       </div>
     </div>
@@ -795,7 +990,7 @@ function showResult() {
 
     <div class="res-actions">
       <button class="ra ra-retry" onclick="generate()">↻ Otra versión</button>
-      <button class="ra ra-order" onclick="toast('Pedido registrado. Te contactamos pronto.','ok')">Pedir → ${getTotal()}€</button>
+      <button class="ra ra-order" id="orderBtn" onclick="submitOrder()">Pedir → ${getTotal()}€</button>
     </div>
     <div class="summary">
       <div class="srow"><span>Producto</span><span>${p.name}</span></div>
@@ -806,6 +1001,78 @@ function showResult() {
     </div>
   </div>`;
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ═══════════════════════════════════
+// SUBMIT ORDER TO SUPABASE
+// ═══════════════════════════════════
+async function submitOrder() {
+  const btn = document.getElementById('orderBtn');
+  if(!btn) return;
+  btn.textContent = 'Procesando...';
+  btn.style.opacity = '.6';
+  btn.disabled = true;
+  
+  try {
+    // Upload audio if exists
+    let audioFileUrl = null;
+    const orderId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
+    
+    if(S.audioBlob && !document.getElementById('skipAudio')?.checked) {
+      audioFileUrl = await uploadAudio(S.audioBlob, orderId);
+    }
+    
+    // Build order data
+    const orderData = {
+      id: orderId,
+      product: S.product.name,
+      style: S.style,
+      design_url: S.result || null,
+      audio_url: audioFileUrl,
+      extras: {
+        qr_product: true,
+        qr_box: !!document.querySelector('.tog.on[data-price="3"]'),
+        sound_module: !!document.querySelector('.tog.on[data-price="15"]'),
+        custom_box: !!document.querySelector('.tog.on[data-price="5"]'),
+        zones: S.selectedZones
+      },
+      total: getTotal(),
+      status: 'pending'
+    };
+    
+    // Save to Supabase
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON,
+        'Authorization': `Bearer ${SUPABASE_ANON}`,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(orderData)
+    });
+    
+    if(res.ok) {
+      toast('¡Pedido registrado! Te contactamos pronto 🎉', 'ok');
+      btn.textContent = '✓ Pedido enviado';
+      btn.style.background = '#4ade80';
+      btn.style.borderColor = '#4ade80';
+      console.log('Order saved:', orderId);
+    } else {
+      const err = await res.text();
+      console.error('Order save error:', err);
+      toast('Error al guardar. Inténtalo de nuevo.', 'err');
+      btn.textContent = `Pedir → ${getTotal()}€`;
+      btn.style.opacity = '1';
+      btn.disabled = false;
+    }
+  } catch(err) {
+    console.error('Order error:', err);
+    toast('Error de conexión. Inténtalo de nuevo.', 'err');
+    btn.textContent = `Pedir → ${getTotal()}€`;
+    btn.style.opacity = '1';
+    btn.disabled = false;
+  }
 }
 
 // ═══════════════════════════════════
