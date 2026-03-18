@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VIVOgift — Configurador TEST</title>
+<title>VIVOgift — Crea tu regalo</title>
 <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
@@ -55,6 +55,15 @@ button{font-family:var(--fb);cursor:pointer}
 .sp{padding:5px 11px;border-radius:18px;border:1.5px solid #ffffff12;background:transparent;color:var(--text3);font-size:10px;transition:.2s}
 .sp:hover{border-color:var(--lime20);color:var(--text2)}
 .sp.on{border-color:var(--lime);background:var(--lime10);color:var(--lime);font-weight:600}
+
+/* Product cards */
+.pcard{background:var(--bg3);border:2px solid transparent;border-radius:var(--rs);padding:6px;cursor:pointer;transition:.2s;text-align:center;position:relative}
+.pcard:hover{border-color:var(--lime20);transform:translateY(-1px)}
+.pcard.on{border-color:var(--lime);background:var(--bg4)}
+.pcard img{width:100%;height:60px;object-fit:contain;border-radius:5px;margin-bottom:3px}
+.pcard .pn{font-size:10px;font-weight:600;line-height:1.2}
+.pcard .pp{font-size:9px;color:var(--lime);margin-top:1px}
+.pcard .pbadge{position:absolute;top:3px;right:3px;background:var(--lime);color:var(--bg);font-size:7px;font-weight:700;padding:1px 4px;border-radius:3px}
 
 /* Zones */
 .zones{display:flex;flex-wrap:wrap;gap:5px}
@@ -172,10 +181,11 @@ model-viewer::part(default-progress-bar){background:var(--lime);height:3px}
 <!-- SIDEBAR -->
 <div class="sidebar">
 
+  <!-- PRODUCT SELECTOR -->
   <div>
     <div class="step-label">Producto</div>
-    <div class="step-title">Cenicero LED (Prueba 3D)</div>
-    <p style="font-size:11px;color:var(--text3)">Gira el modelo 3D con el ratón →</p>
+    <div class="step-title">Elige tu producto</div>
+    <div id="pgrid" style="display:grid;grid-template-columns:1fr 1fr;gap:7px"></div>
   </div>
 
   <!-- FLOW -->
@@ -217,14 +227,11 @@ model-viewer::part(default-progress-bar){background:var(--lime);height:3px}
     </div>
   </div>
 
-  <!-- ZONES -->
+  <!-- DYNAMIC ZONES -->
   <div>
-    <div class="step-label">Paso 4</div>
+    <div class="step-label" id="zoneStep">Paso 4</div>
     <div class="step-title">¿Dónde va el diseño?</div>
-    <div class="zones">
-      <button class="zb on" onclick="this.classList.toggle('on')">⬆ Tapa</button>
-      <button class="zb" onclick="this.classList.toggle('on')">◯ Bordes</button>
-    </div>
+    <div class="zones" id="zonesContainer"></div>
   </div>
 
   <!-- EXTRAS -->
@@ -237,6 +244,49 @@ model-viewer::part(default-progress-bar){background:var(--lime);height:3px}
     <div class="ext"><div><div class="ext-n">Caja personalizada</div><div class="ext-d">Tu diseño en la caja</div></div><div style="display:flex;align-items:center;gap:7px"><span class="ext-p">+5€</span><div class="tog" data-price="5" onclick="this.classList.toggle('on');updateTotal()"></div></div></div>
   </div>
 
+  <!-- AUDIO RECORDER -->
+  <div>
+    <div class="step-label">Paso 6</div>
+    <div class="step-title">Tu mensaje de voz</div>
+    <p style="font-size:10px;color:var(--text3);margin-bottom:10px">Graba el mensaje que sonará al abrir la caja. Máximo 30 segundos.</p>
+    
+    <div id="audioRecorder">
+      <!-- Record button -->
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button id="recBtn" onclick="toggleRecording()" style="display:flex;align-items:center;gap:6px;padding:10px 16px;border-radius:var(--rs);border:1.5px solid #ff4444;background:transparent;color:#ff4444;font-size:11px;font-weight:600;transition:.2s">
+          <span id="recDot" style="width:8px;height:8px;border-radius:50%;background:#ff4444"></span>
+          <span id="recText">Grabar mensaje</span>
+        </button>
+        <span id="recTimer" style="font-size:11px;color:var(--text3);font-variant-numeric:tabular-nums;display:none">00:00 / 00:30</span>
+      </div>
+      
+      <!-- Audio preview (hidden until recorded) -->
+      <div id="audioPreview" style="display:none;margin-top:10px;background:var(--bg3);border-radius:var(--rs);padding:10px;border:1px solid #ffffff08">
+        <div style="display:flex;align-items:center;gap:8px">
+          <button onclick="playRecording()" id="playBtn" style="width:32px;height:32px;border-radius:50%;background:var(--lime);border:none;color:var(--bg);font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0">▶</button>
+          <div style="flex:1">
+            <div id="waveform" style="height:24px;background:var(--bg4);border-radius:4px;overflow:hidden;position:relative">
+              <div id="waveProgress" style="height:100%;width:0%;background:var(--lime20);transition:width .1s"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:3px">
+              <span id="audioDuration" style="font-size:9px;color:var(--text3)">0s</span>
+              <span style="font-size:9px;color:var(--lime)">✓ Grabado</span>
+            </div>
+          </div>
+          <button onclick="deleteRecording()" style="width:24px;height:24px;border-radius:50%;background:var(--bg4);border:1px solid #ffffff10;color:var(--text3);font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" title="Borrar">×</button>
+        </div>
+      </div>
+      
+      <!-- Skip option -->
+      <div style="margin-top:8px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text3);cursor:pointer">
+          <input type="checkbox" id="skipAudio" style="accent-color:var(--lime)" checked>
+          Sin mensaje de voz (solo QR visual)
+        </label>
+      </div>
+    </div>
+  </div>
+
   <button class="btn-go" id="btnGo" onclick="generate()">
     <span class="bt">✦ Crear mi diseño</span>
     <div class="spin"></div>
@@ -245,12 +295,12 @@ model-viewer::part(default-progress-bar){background:var(--lime);height:3px}
 
 <!-- MAIN -->
 <div class="main">
-  <!-- 3D VIEWER -->
+  <!-- 3D VIEWER / PRODUCT IMAGE -->
   <div class="viewer-3d">
     <model-viewer
       id="mv"
-      src="https://rtjgcpklpyolzsdjjtdb.supabase.co/storage/v1/object/public/assets/Meshy_AI_cenicero_0318181734_texture.glb"
-      alt="Cenicero LED 3D"
+      src="https://rtjgcpklpyolzsdjjtdb.supabase.co/storage/v1/object/public/assets/cenicero.glb"
+      alt="Producto 3D"
       auto-rotate
       camera-controls
       touch-action="pan-y"
@@ -264,8 +314,9 @@ model-viewer::part(default-progress-bar){background:var(--lime);height:3px}
     >
       <div slot="progress-bar"></div>
     </model-viewer>
+    <img id="fallbackImg" src="" alt="" style="display:none;width:100%;height:100%;object-fit:contain;padding:20px" crossorigin="anonymous">
   </div>
-  <div class="viewer-label">Mueve el cenicero con el ratón · <span>Modelo 3D real</span></div>
+  <div class="viewer-label">Mueve el producto con el ratón · <span>Modelo 3D real</span></div>
 
   <!-- RESULT -->
   <div class="result-panel" id="resultPanel" style="display:none"></div>
@@ -296,20 +347,62 @@ model-viewer::part(default-progress-bar){background:var(--lime);height:3px}
 
 <script>
 // ═══════════════════════════════════
-// STATE
+// SUPABASE CONFIG
 // ═══════════════════════════════════
-const S = {
-  flow: 'photo',
-  photo: null,
-  prompt: '',
-  style: 'anime',
-  result: null,
-  atlasKey: null,
-  geminiKey: null,
-  basePrice: 20
-};
+const SUPABASE_URL = 'https://rtjgcpklpyolzsdjjtdb.supabase.co';
+const SUPABASE_STORAGE = SUPABASE_URL + '/storage/v1/object/public/assets';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0amdjcGtscHlvbHpzZGpqdGRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NjI5NzMsImV4cCI6MjA4OTQzODk3M30.cXX0916XOXbe3DsR-rBV__9Boi4Pyh30z1g5LsJGpeY';
+
+// ═══════════════════════════════════
+// PRODUCTS — update glb filenames when you upload them
+// ═══════════════════════════════════
+const PRODUCTS = [
+  {
+    id: 'cenicero_led',
+    name: 'Cenicero LED',
+    price: 20,
+    badge: 'NEW',
+    img: SUPABASE_STORAGE + '/1-front.png',
+    glb: SUPABASE_STORAGE + '/cenicero.glb',
+    zones: [{id:'tapa',name:'Tapa',icon:'⬆',default:true},{id:'bordes',name:'Bordes',icon:'◯'}],
+    promptCtx: 'circular design for the lid of a portable car ashtray',
+    // Mockup overlay position (CSS: top, left, width, height, borderRadius)
+    mockup: {top:'8%',left:'22%',width:'56%',height:'35%',borderRadius:'50%'}
+  },
+  {
+    id: 'mechero',
+    name: 'Mechero Custom',
+    price: 14,
+    img: SUPABASE_STORAGE + '/1-metal.png',
+    glb: SUPABASE_STORAGE + '/mechero.glb',
+    zones: [{id:'cuerpo',name:'Cuerpo',icon:'▮',default:true}],
+    promptCtx: 'design for the flat rectangular side panel of a metallic lighter',
+    mockup: {top:'15%',left:'30%',width:'40%',height:'55%',borderRadius:'4px'}
+  },
+  {
+    id: 'grinder',
+    name: 'Grinder Natural',
+    price: 22,
+    img: SUPABASE_STORAGE + '/1-madera%20(1).png',
+    glb: SUPABASE_STORAGE + '/grinder.glb',
+    zones: [{id:'tapa_sup',name:'Tapa superior',icon:'⬆',default:true},{id:'tapa_inf',name:'Tapa inferior',icon:'⬇'},{id:'bordes',name:'Bordes',icon:'◯'}],
+    promptCtx: 'circular design for the flat wooden top of a grinder',
+    mockup: {top:'5%',left:'15%',width:'70%',height:'40%',borderRadius:'50%'}
+  },
+  {
+    id: 'posavasos',
+    name: 'Posavasos',
+    price: 18,
+    img: SUPABASE_STORAGE + '/1-1-black.png',
+    glb: SUPABASE_STORAGE + '/portavaso.glb',
+    zones: [{id:'cara_sup',name:'Cara superior',icon:'⬆',default:true},{id:'cara_inf',name:'Cara inferior',icon:'⬇'}],
+    promptCtx: 'circular design for a round coaster surface',
+    mockup: {top:'18%',left:'10%',width:'50%',height:'40%',borderRadius:'50%'}
+  }
+];
 
 const STYLES = [
+  {id:'original',label:'📌 Original'},
   {id:'anime',label:'✨ Anime'},
   {id:'comic',label:'💥 Cómic'},
   {id:'realista',label:'📸 Realista'},
@@ -321,6 +414,7 @@ const STYLES = [
 ];
 
 const STYLE_PROMPTS = {
+  original: null,
   anime: 'anime manga art style with bold outlines and vivid cel-shaded colors',
   comic: 'comic book illustration with halftone dots, bold inks, dynamic composition',
   realista: 'photorealistic hyper-detailed digital art',
@@ -332,24 +426,34 @@ const STYLE_PROMPTS = {
 };
 
 // ═══════════════════════════════════
-// SUPABASE CONFIG
+// STATE
 // ═══════════════════════════════════
-const SUPABASE_URL = 'https://rtjgcpklpyolzsdjjtdb.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0amdjcGtscHlvbHpzZGpqdGRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NjI5NzMsImV4cCI6MjA4OTQzODk3M30.cXX0916XOXbe3DsR-rBV__9Boi4Pyh30z1g5LsJGpeY';
+const S = {
+  product: PRODUCTS[0],
+  flow: 'photo',
+  photo: null,
+  prompt: '',
+  style: 'original',
+  selectedZones: ['tapa'],
+  result: null,
+  audioBlob: null,
+  atlasKey: null,
+  geminiKey: null
+};
 
 // ═══════════════════════════════════
-// INIT — loads keys from Supabase
+// INIT
 // ═══════════════════════════════════
 async function init() {
+  renderProducts();
   renderStyles();
+  renderZones();
   setupUpload();
-  // Load API keys from Supabase config table
+  
+  // Load API keys from Supabase
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/config?select=key,value`, {
-      headers: {
-        'apikey': SUPABASE_ANON,
-        'Authorization': `Bearer ${SUPABASE_ANON}`
-      }
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` }
     });
     if(res.ok) {
       const rows = await res.json();
@@ -360,9 +464,66 @@ async function init() {
       if(S.atlasKey) console.log('✦ Atlas Cloud conectado');
       if(S.geminiKey) console.log('✦ Gemini conectado');
     }
-  } catch(e) {
-    console.warn('No se pudieron cargar las keys de Supabase:', e);
+  } catch(e) { console.warn('Keys load error:', e); }
+}
+
+// ═══════════════════════════════════
+// PRODUCT SELECTOR
+// ═══════════════════════════════════
+function renderProducts() {
+  document.getElementById('pgrid').innerHTML = PRODUCTS.map(p => `
+    <div class="pcard${p.id===S.product.id?' on':''}" onclick="selProduct('${p.id}')">
+      ${p.badge?`<span class="pbadge">${p.badge}</span>`:''}
+      <img src="${p.img}" alt="${p.name}" crossorigin="anonymous">
+      <div class="pn">${p.name}</div>
+      <div class="pp">desde ${p.price}€</div>
+    </div>
+  `).join('');
+}
+
+function selProduct(id) {
+  S.product = PRODUCTS.find(p => p.id === id);
+  S.selectedZones = S.product.zones.filter(z => z.default).map(z => z.id);
+  S.result = null;
+  
+  renderProducts();
+  renderZones();
+  
+  // Update 3D viewer
+  const mv = document.getElementById('mv');
+  if(S.product.glb) {
+    mv.src = S.product.glb;
+    mv.style.display = '';
+    document.getElementById('fallbackImg').style.display = 'none';
+    document.querySelector('.viewer-label').innerHTML = `Mueve el producto con el ratón · <span>Modelo 3D real</span>`;
+  } else {
+    mv.style.display = 'none';
+    const fb = document.getElementById('fallbackImg');
+    fb.src = S.product.img;
+    fb.style.display = 'block';
+    document.querySelector('.viewer-label').innerHTML = `${S.product.name} · <span>Foto real</span>`;
   }
+  
+  // Hide result panel
+  document.getElementById('resultPanel').style.display = 'none';
+}
+
+// ═══════════════════════════════════
+// ZONES — dynamic per product
+// ═══════════════════════════════════
+function renderZones() {
+  document.getElementById('zonesContainer').innerHTML = S.product.zones.map(z => `
+    <button class="zb${S.selectedZones.includes(z.id)?' on':''}" onclick="togZone('${z.id}')">${z.icon} ${z.name}</button>
+  `).join('');
+}
+
+function togZone(id) {
+  if(S.selectedZones.includes(id)) {
+    if(S.selectedZones.length > 1) S.selectedZones = S.selectedZones.filter(z => z !== id);
+  } else {
+    S.selectedZones.push(id);
+  }
+  renderZones();
 }
 
 function renderStyles() {
@@ -418,7 +579,7 @@ function clearFile() {
 // EXTRAS & TOTAL
 // ═══════════════════════════════════
 function getTotal() {
-  let t = S.basePrice;
+  let t = S.product.price;
   document.querySelectorAll('.tog.on[data-price]').forEach(el => t += parseInt(el.dataset.price));
   return t;
 }
@@ -443,11 +604,16 @@ async function generate() {
     let imageUrl;
 
     if(S.flow === 'photo' && S.photo) {
-      // IMAGE-TO-IMAGE: Nano Banana Pro Edit
-      imageUrl = await atlasI2I(S.photo, STYLE_PROMPTS[S.style]);
+      if(S.style === 'original') {
+        // Original — use the photo as-is, no API call
+        imageUrl = S.photo;
+      } else {
+        // IMAGE-TO-IMAGE: Nano Banana Pro Edit — transform to style
+        imageUrl = await atlasI2I(S.photo, STYLE_PROMPTS[S.style]);
+      }
     } else {
       // TEXT-TO-IMAGE: Nano Banana T2I
-      imageUrl = await atlasT2I(S.prompt, STYLE_PROMPTS[S.style]);
+      imageUrl = await atlasT2I(S.prompt, STYLE_PROMPTS[S.style] || 'high quality digital art');
     }
 
     S.result = imageUrl;
@@ -462,7 +628,7 @@ async function generate() {
 
 // Atlas Cloud — Text to Image
 async function atlasT2I(prompt, stylePrompt) {
-  const fullPrompt = `${stylePrompt} artwork. ${prompt}. This design will be printed on the lid of a portable car ashtray. Fill the entire image, no borders or frames. Dark/black background. Vibrant colors, high detail, print-ready. Standalone artwork, NOT a product mockup.`;
+  const fullPrompt = `${stylePrompt} artwork. ${prompt}. This design will be printed on a product (${S.product.promptCtx}). Fill the entire image, no borders or frames. Dark/black background. Vibrant colors, high detail, print-ready. Standalone artwork, NOT a product mockup.`;
 
   const res = await fetch('https://api.atlascloud.ai/api/v1/model/generateImage', {
     method: 'POST',
@@ -594,28 +760,200 @@ async function pollAtlasResult(predId) {
 }
 
 // ═══════════════════════════════════
-// SHOW RESULT
+// SHOW RESULT — with 2D mockup
 // ═══════════════════════════════════
 function showResult() {
   const panel = document.getElementById('resultPanel');
   const styleName = STYLES.find(s=>s.id===S.style)?.label?.replace(/[^\w\sáéíóú]/g,'').trim() || S.style;
+  const p = S.product;
+  const m = p.mockup;
+  
   panel.style.display = 'block';
   panel.innerHTML = `<div class="fadein">
     <div class="res-label">✦ Tu diseño personalizado</div>
-    <div class="res-title">Cenicero LED · ${styleName}</div>
-    <div class="res-img"><div class="glow"></div><img src="${S.result}" style="position:relative;z-index:1"></div>
+    <div class="res-title">${p.name} · ${styleName}</div>
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div>
+        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-family:var(--fd);font-weight:700">Diseño generado</div>
+        <div class="res-img"><div class="glow"></div><img src="${S.result}" style="position:relative;z-index:1;border-radius:var(--r)"></div>
+      </div>
+      <div>
+        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-family:var(--fd);font-weight:700">Así queda en tu producto</div>
+        <div style="position:relative;border-radius:var(--r);overflow:hidden;background:var(--bg);aspect-ratio:1/1">
+          <img src="${p.img}" style="width:100%;height:100%;object-fit:contain;position:relative;z-index:2" crossorigin="anonymous">
+          <div style="position:absolute;top:${m.top};left:${m.left};width:${m.width};height:${m.height};z-index:1;border-radius:${m.borderRadius};overflow:hidden;opacity:.85">
+            <img src="${S.result}" style="width:100%;height:100%;object-fit:cover" crossorigin="anonymous">
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div style="display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding:4px 0">
+      ${PRODUCTS.map(pr => `<img src="${pr.img}" style="height:48px;border-radius:6px;border:2px solid ${pr.id===p.id?'var(--lime)':'transparent'};opacity:${pr.id===p.id?'.9':'.5'};cursor:pointer" crossorigin="anonymous" onclick="selProduct('${pr.id}')" title="${pr.name}">`).join('')}
+    </div>
+
     <div class="res-actions">
       <button class="ra ra-retry" onclick="generate()">↻ Otra versión</button>
       <button class="ra ra-order" onclick="toast('Pedido registrado. Te contactamos pronto.','ok')">Pedir → ${getTotal()}€</button>
     </div>
     <div class="summary">
-      <div class="srow"><span>Producto</span><span>Cenicero LED</span></div>
+      <div class="srow"><span>Producto</span><span>${p.name}</span></div>
       <div class="srow"><span>Estilo</span><span>${styleName}</span></div>
       <div class="srow"><span>QR en producto</span><span>Incluido ✓</span></div>
+      <div class="srow"><span>Mensaje de voz</span><span>${S.audioBlob ? '✓ Grabado' : 'Sin mensaje'}</span></div>
       <div class="stotal"><span>Total</span><span>${getTotal()}€</span></div>
     </div>
   </div>`;
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ═══════════════════════════════════
+// AUDIO RECORDER
+// ═══════════════════════════════════
+let mediaRecorder = null;
+let audioChunks = [];
+let audioBlob = null;
+let audioUrl = null;
+let audioElement = null;
+let recInterval = null;
+let recSeconds = 0;
+const MAX_REC = 30;
+
+async function toggleRecording() {
+  if(mediaRecorder && mediaRecorder.state === 'recording') {
+    stopRecording();
+  } else {
+    await startRecording();
+  }
+}
+
+async function startRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    
+    mediaRecorder.ondataavailable = e => { if(e.data.size > 0) audioChunks.push(e.data); };
+    
+    mediaRecorder.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+      audioUrl = URL.createObjectURL(audioBlob);
+      audioElement = new Audio(audioUrl);
+      S.audioBlob = audioBlob;
+      
+      // Uncheck skip
+      document.getElementById('skipAudio').checked = false;
+      
+      // Show preview
+      const preview = document.getElementById('audioPreview');
+      preview.style.display = 'block';
+      document.getElementById('audioDuration').textContent = recSeconds + 's';
+      
+      // Reset button
+      const btn = document.getElementById('recBtn');
+      btn.style.borderColor = '#ff4444';
+      btn.style.color = '#ff4444';
+      document.getElementById('recDot').style.background = '#ff4444';
+      document.getElementById('recDot').style.animation = '';
+      document.getElementById('recText').textContent = 'Grabar de nuevo';
+      document.getElementById('recTimer').style.display = 'none';
+    };
+    
+    mediaRecorder.start();
+    recSeconds = 0;
+    
+    // Update UI
+    const btn = document.getElementById('recBtn');
+    btn.style.borderColor = '#ff4444';
+    btn.style.color = '#fff';
+    btn.style.background = '#ff4444';
+    document.getElementById('recDot').style.background = '#fff';
+    document.getElementById('recDot').style.animation = 'pu 1s infinite';
+    document.getElementById('recText').textContent = 'Parar';
+    document.getElementById('recTimer').style.display = '';
+    
+    // Timer
+    recInterval = setInterval(() => {
+      recSeconds++;
+      const m = String(Math.floor(recSeconds / 60)).padStart(2, '0');
+      const s = String(recSeconds % 60).padStart(2, '0');
+      document.getElementById('recTimer').textContent = `${m}:${s} / 00:${MAX_REC}`;
+      
+      // Auto-stop at max
+      if(recSeconds >= MAX_REC) stopRecording();
+    }, 1000);
+    
+  } catch(err) {
+    console.error('Mic error:', err);
+    toast('No se pudo acceder al micrófono. Revisa los permisos.', 'err');
+  }
+}
+
+function stopRecording() {
+  if(recInterval) { clearInterval(recInterval); recInterval = null; }
+  if(mediaRecorder && mediaRecorder.state === 'recording') {
+    mediaRecorder.stop();
+  }
+  // Reset button style
+  const btn = document.getElementById('recBtn');
+  btn.style.background = 'transparent';
+}
+
+function playRecording() {
+  if(!audioElement) return;
+  const playBtn = document.getElementById('playBtn');
+  
+  if(audioElement.paused) {
+    audioElement.currentTime = 0;
+    audioElement.play();
+    playBtn.textContent = '⏸';
+    
+    // Progress bar
+    const progressUpdate = setInterval(() => {
+      if(audioElement.paused) { clearInterval(progressUpdate); playBtn.textContent = '▶'; document.getElementById('waveProgress').style.width = '0%'; return; }
+      const pct = (audioElement.currentTime / audioElement.duration) * 100;
+      document.getElementById('waveProgress').style.width = pct + '%';
+    }, 100);
+    
+    audioElement.onended = () => {
+      playBtn.textContent = '▶';
+      document.getElementById('waveProgress').style.width = '0%';
+    };
+  } else {
+    audioElement.pause();
+    playBtn.textContent = '▶';
+  }
+}
+
+function deleteRecording() {
+  audioBlob = null;
+  audioUrl = null;
+  audioElement = null;
+  S.audioBlob = null;
+  document.getElementById('audioPreview').style.display = 'none';
+  document.getElementById('recText').textContent = 'Grabar mensaje';
+  document.getElementById('skipAudio').checked = true;
+}
+
+// Upload audio to Supabase Storage
+async function uploadAudio(blob, orderId) {
+  const filename = `audio/${orderId}.webm`;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/assets/${filename}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON,
+        'Authorization': `Bearer ${SUPABASE_ANON}`,
+        'Content-Type': 'audio/webm',
+        'x-upsert': 'true'
+      },
+      body: blob
+    });
+    if(res.ok) return `${SUPABASE_STORAGE}/${filename}`;
+  } catch(e) { console.error('Audio upload error:', e); }
+  return null;
 }
 
 // ═══════════════════════════════════
