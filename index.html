@@ -353,7 +353,7 @@ const PRODUCTS = [
     glb: SUPABASE_STORAGE + '/cenicero.glb',
     zones: [{id:'tapa',name:'Tapa',icon:'⬆',default:true},{id:'bordes',name:'Bordes',icon:'◯'}],
     promptCtx: 'circular design for the lid of a portable car ashtray',
-    // Mockup overlay position (CSS: top, left, width, height, borderRadius)
+    printSize: 'Ø 5cm (tapa)',
     mockup: {top:'8%',left:'22%',width:'56%',height:'35%',borderRadius:'50%',transform:'perspective(400px) rotateX(55deg)'}
   },
   {
@@ -364,6 +364,7 @@ const PRODUCTS = [
     glb: SUPABASE_STORAGE + '/mechero.glb',
     zones: [{id:'cuerpo',name:'Cuerpo',icon:'▮',default:true}],
     promptCtx: 'design for the flat rectangular side panel of a metallic lighter',
+    printSize: '25mm × 78.5mm',
     mockup: {top:'15%',left:'30%',width:'40%',height:'55%',borderRadius:'4px',transform:'perspective(400px) rotateY(-5deg)'}
   },
   {
@@ -374,6 +375,7 @@ const PRODUCTS = [
     glb: SUPABASE_STORAGE + '/grinder.glb',
     zones: [{id:'tapa_sup',name:'Tapa superior',icon:'⬆',default:true},{id:'tapa_inf',name:'Tapa inferior',icon:'⬇'},{id:'bordes',name:'Bordes',icon:'◯'}],
     promptCtx: 'circular design for the flat wooden top of a grinder',
+    printSize: 'Ø 55mm (tapa)',
     mockup: {top:'5%',left:'15%',width:'70%',height:'40%',borderRadius:'50%',transform:'perspective(400px) rotateX(30deg)'}
   },
   {
@@ -384,6 +386,7 @@ const PRODUCTS = [
     glb: SUPABASE_STORAGE + '/portavaso.glb',
     zones: [{id:'cara_sup',name:'Cara superior',icon:'⬆',default:true},{id:'cara_inf',name:'Cara inferior',icon:'⬇'}],
     promptCtx: 'circular design for a round coaster surface',
+    printSize: 'Ø 8cm (cara)',
     mockup: {top:'18%',left:'10%',width:'50%',height:'40%',borderRadius:'50%',transform:'perspective(400px) rotateX(45deg)'}
   }
 ];
@@ -598,12 +601,19 @@ function load3DModel(url) {
       model.position.sub(center.multiplyScalar(scale));
       model.position.y -= (box.min.y * scale);
       
-      // Store original materials for reset
+      // Store original materials and LOG mesh names for debugging
       model.traverse((child) => {
         if(child.isMesh && child.material) {
           originalMaterials.set(child.uuid, child.material.clone());
+          console.log(`  Mesh: "${child.name}" | Material: "${child.material.name}" | UUID: ${child.uuid.slice(0,8)}`);
         }
       });
+      
+      // Store mesh list for zone mapping
+      const meshList = [];
+      model.traverse((child) => { if(child.isMesh) meshList.push(child); });
+      S.meshCount = meshList.length;
+      console.log(`  Total meshes: ${meshList.length}`);
       
       threeScene.add(model);
       currentModel = model;
@@ -640,23 +650,69 @@ function load3DModel(url) {
 function applyTextureToModel(model, texture) {
   if(!model) return;
   
-  model.traverse((child) => {
-    if(child.isMesh && child.material) {
-      if(texture) {
-        // Apply design texture
-        child.material = child.material.clone();
-        child.material.map = texture;
-        child.material.needsUpdate = true;
-      } else {
-        // Restore original
-        const orig = originalMaterials.get(child.uuid);
-        if(orig) {
-          child.material = orig.clone();
-          child.material.needsUpdate = true;
-        }
+  // Collect all meshes
+  const meshes = [];
+  model.traverse((child) => { if(child.isMesh) meshes.push(child); });
+  
+  if(!texture) {
+    // Restore all originals
+    meshes.forEach(m => {
+      const orig = originalMaterials.get(m.uuid);
+      if(orig) { m.material = orig.clone(); m.material.needsUpdate = true; }
+    });
+    return;
+  }
+  
+  // Determine which meshes to texture based on selected zones
+  // Strategy: for models with multiple meshes, try to match by name/position
+  // For Meshy models: usually the top/lid mesh has highest Y position
+  const zones = S.selectedZones;
+  
+  meshes.forEach((mesh, idx) => {
+    // Get mesh center Y to determine if it's top or bottom
+    const meshBox = new THREE.Box3().setFromObject(mesh);
+    const meshCenterY = (meshBox.min.y + meshBox.max.y) / 2;
+    const modelBox = new THREE.Box3().setFromObject(model);
+    const modelMidY = (modelBox.min.y + modelBox.max.y) / 2;
+    const isTopHalf = meshCenterY > modelMidY;
+    const name = (mesh.name || '').toLowerCase();
+    
+    let shouldTexture = false;
+    
+    // Zone matching logic
+    if(zones.includes('tapa') || zones.includes('tapa_sup') || zones.includes('cara_sup')) {
+      // Top parts — apply to meshes in upper half or with "top/lid/tapa" in name
+      if(isTopHalf || name.includes('top') || name.includes('lid') || name.includes('tapa') || name.includes('cap')) {
+        shouldTexture = true;
       }
+      // If only 1 mesh, apply to it
+      if(meshes.length === 1) shouldTexture = true;
+    }
+    
+    if(zones.includes('bordes') || zones.includes('cuerpo')) {
+      // Body/sides — apply to meshes in lower half or all non-top meshes
+      if(!isTopHalf || name.includes('body') || name.includes('side') || name.includes('cuerpo')) {
+        shouldTexture = true;
+      }
+      if(meshes.length === 1) shouldTexture = true;
+    }
+    
+    if(zones.includes('tapa_inf') || zones.includes('cara_inf')) {
+      if(!isTopHalf) shouldTexture = true;
+    }
+    
+    // Apply or restore
+    if(shouldTexture) {
+      mesh.material = mesh.material.clone();
+      mesh.material.map = texture;
+      mesh.material.needsUpdate = true;
+    } else {
+      const orig = originalMaterials.get(mesh.uuid);
+      if(orig) { mesh.material = orig.clone(); mesh.material.needsUpdate = true; }
     }
   });
+  
+  console.log(`✦ Texture applied to zones: ${zones.join(', ')} (${meshes.length} meshes evaluated)`);
 }
 
 // Called when design is generated
@@ -957,9 +1013,9 @@ function showResult() {
   const panel = document.getElementById('resultPanel');
   const styleName = STYLES.find(s=>s.id===S.style)?.label?.replace(/[^\w\sáéíóú]/g,'').trim() || S.style;
   const p = S.product;
-  const m = p.mockup;
+  const zoneNames = S.selectedZones.map(zid => { const z = p.zones.find(z=>z.id===zid); return z ? z.name : zid; }).join(', ');
   
-  // Also overlay design on 3D viewer
+  // Apply design to 3D model
   applyDesignTo3D(S.result);
   
   panel.style.display = 'block';
@@ -967,23 +1023,26 @@ function showResult() {
     <div class="res-label">✦ Tu diseño personalizado</div>
     <div class="res-title">${p.name} · ${styleName}</div>
     
+    <!-- Design + Product side by side -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div>
-        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-family:var(--fd);font-weight:700">Diseño generado</div>
+        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-family:var(--fd);font-weight:700">Tu diseño</div>
         <div class="res-img"><div class="glow"></div><img src="${S.result}" style="position:relative;z-index:1;border-radius:var(--r)"></div>
       </div>
       <div>
-        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-family:var(--fd);font-weight:700">Mockup del producto</div>
-        <div style="position:relative;border-radius:var(--r);overflow:hidden;background:var(--bg);aspect-ratio:1/1">
-          <img src="${p.img}" style="width:100%;height:100%;object-fit:contain;position:relative;z-index:2;mix-blend-mode:luminosity;opacity:.4" crossorigin="anonymous">
-          <div style="position:absolute;top:${m.top};left:${m.left};width:${m.width};height:${m.height};z-index:3;border-radius:${m.borderRadius};overflow:hidden;transform:${m.transform||'none'};box-shadow:0 2px 12px #0008">
-            <img src="${S.result}" style="width:100%;height:100%;object-fit:cover" crossorigin="anonymous">
-          </div>
-          <img src="${p.img}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:4;mix-blend-mode:screen;opacity:.35;pointer-events:none" crossorigin="anonymous">
+        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-family:var(--fd);font-weight:700">Producto real</div>
+        <div style="border-radius:var(--r);overflow:hidden;background:var(--bg);aspect-ratio:1/1;display:flex;align-items:center;justify-content:center">
+          <img src="${p.img}" style="max-width:100%;max-height:100%;object-fit:contain" crossorigin="anonymous">
         </div>
       </div>
     </div>
     
+    <!-- Zone info -->
+    <div style="text-align:center;padding:8px 12px;background:var(--bg3);border-radius:var(--rs);margin-bottom:12px;font-size:11px;color:var(--text2)">
+      Diseño se aplica en: <span style="color:var(--lime);font-weight:600">${zoneNames}</span> · Medidas: <span style="color:var(--lime)">${p.printSize || 'según producto'}</span>
+    </div>
+    
+    <!-- Product thumbnails -->
     <div style="display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding:4px 0">
       ${PRODUCTS.map(pr => `<img src="${pr.img}" style="height:48px;border-radius:6px;border:2px solid ${pr.id===p.id?'var(--lime)':'transparent'};opacity:${pr.id===p.id?'.9':'.5'};cursor:pointer" crossorigin="anonymous" onclick="selProduct('${pr.id}')" title="${pr.name}">`).join('')}
     </div>
@@ -995,6 +1054,7 @@ function showResult() {
     <div class="summary">
       <div class="srow"><span>Producto</span><span>${p.name}</span></div>
       <div class="srow"><span>Estilo</span><span>${styleName}</span></div>
+      <div class="srow"><span>Zona</span><span>${zoneNames}</span></div>
       <div class="srow"><span>QR en producto</span><span>Incluido ✓</span></div>
       <div class="srow"><span>Mensaje de voz</span><span>${S.audioBlob ? '✓ Grabado' : 'Sin mensaje'}</span></div>
       <div class="stotal"><span>Total</span><span>${getTotal()}€</span></div>
