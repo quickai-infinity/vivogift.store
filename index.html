@@ -716,43 +716,63 @@ function applyTextureToModel(model, texture) {
 }
 
 // Called when design is generated
-function applyDesignTo3D(imageUrl) {
+async function applyDesignTo3D(imageUrl) {
   if(!imageUrl || !currentModel) {
     currentDesignTexture = null;
+    if(currentModel) applyTextureToModel(currentModel, null);
     return;
   }
   
-  const texLoader = new THREE.TextureLoader();
-  texLoader.crossOrigin = 'anonymous';
-  texLoader.load(imageUrl, 
-    (texture) => {
-      texture.encoding = THREE.sRGBEncoding;
-      texture.flipY = false;
-      currentDesignTexture = texture;
-      applyTextureToModel(currentModel, texture);
-      console.log('✦ Design texture applied to 3D model');
-    },
-    undefined,
-    (err) => {
-      console.error('Texture load error:', err);
-      // Try with a canvas-based approach for cross-origin images
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        canvas.getContext('2d').drawImage(img, 0, 0);
-        const tex = new THREE.CanvasTexture(canvas);
+  try {
+    let textureSrc = imageUrl;
+    
+    // If it's a remote URL (not base64), fetch as blob to avoid CORS
+    if(imageUrl.startsWith('http')) {
+      console.log('Fetching design image as blob for 3D texture...');
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      textureSrc = URL.createObjectURL(blob);
+    }
+    
+    // Create image element and load
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.encoding = THREE.sRGBEncoding;
+      tex.flipY = false;
+      tex.needsUpdate = true;
+      
+      currentDesignTexture = tex;
+      applyTextureToModel(currentModel, tex);
+      console.log('✦ Design texture applied to 3D model (' + canvas.width + 'x' + canvas.height + ')');
+      
+      // Cleanup object URL
+      if(textureSrc !== imageUrl) URL.revokeObjectURL(textureSrc);
+    };
+    img.onerror = (e) => {
+      console.error('Failed to load design image for 3D:', e);
+      // Last resort: try direct TextureLoader
+      const loader = new THREE.TextureLoader();
+      loader.crossOrigin = 'anonymous';
+      loader.load(imageUrl, (tex) => {
         tex.encoding = THREE.sRGBEncoding;
         tex.flipY = false;
         currentDesignTexture = tex;
         applyTextureToModel(currentModel, tex);
-        console.log('✦ Design texture applied via canvas fallback');
-      };
-      img.src = imageUrl;
-    }
-  );
+        console.log('✦ Design texture applied via direct loader fallback');
+      });
+    };
+    img.src = textureSrc;
+    
+  } catch(err) {
+    console.error('applyDesignTo3D error:', err);
+  }
 }
 
 // ═══════════════════════════════════
