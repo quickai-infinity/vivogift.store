@@ -174,14 +174,8 @@ model-viewer::part(default-progress-bar){background:var(--lime);height:3px}
 
   <div>
     <div class="step-label">Producto</div>
-    <div class="step-title">Cenicero LED</div>
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-      <img id="sidebarProductImg" src="" style="width:56px;height:56px;object-fit:contain;border-radius:6px;background:var(--bg3)" crossorigin="anonymous">
-      <div>
-        <div style="font-size:11px;color:var(--text)">Prueba 3D interactiva</div>
-        <div style="font-size:10px;color:var(--text3)">Gira el modelo con el ratón →</div>
-      </div>
-    </div>
+    <div class="step-title">Cenicero LED (Prueba 3D)</div>
+    <p style="font-size:11px;color:var(--text3)">Gira el modelo 3D con el ratón →</p>
   </div>
 
   <!-- FLOW -->
@@ -308,7 +302,7 @@ const S = {
   flow: 'photo',
   photo: null,
   prompt: '',
-  style: 'original',
+  style: 'anime',
   result: null,
   atlasKey: null,
   geminiKey: null,
@@ -316,7 +310,6 @@ const S = {
 };
 
 const STYLES = [
-  {id:'original',label:'📌 Original'},
   {id:'anime',label:'✨ Anime'},
   {id:'comic',label:'💥 Cómic'},
   {id:'realista',label:'📸 Realista'},
@@ -328,7 +321,6 @@ const STYLES = [
 ];
 
 const STYLE_PROMPTS = {
-  original: null,
   anime: 'anime manga art style with bold outlines and vivid cel-shaded colors',
   comic: 'comic book illustration with halftone dots, bold inks, dynamic composition',
   realista: 'photorealistic hyper-detailed digital art',
@@ -343,7 +335,6 @@ const STYLE_PROMPTS = {
 // SUPABASE CONFIG
 // ═══════════════════════════════════
 const SUPABASE_URL = 'https://rtjgcpklpyolzsdjjtdb.supabase.co';
-const SUPABASE_STORAGE = SUPABASE_URL + '/storage/v1/object/public/assets';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0amdjcGtscHlvbHpzZGpqdGRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NjI5NzMsImV4cCI6MjA4OTQzODk3M30.cXX0916XOXbe3DsR-rBV__9Boi4Pyh30z1g5LsJGpeY';
 
 // ═══════════════════════════════════
@@ -352,9 +343,6 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 async function init() {
   renderStyles();
   setupUpload();
-  // Load product image from Supabase Storage
-  const sImg = document.getElementById('sidebarProductImg');
-  if(sImg) sImg.src = `${SUPABASE_STORAGE}/1-front.png`;
   // Load API keys from Supabase config table
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/config?select=key,value`, {
@@ -455,16 +443,11 @@ async function generate() {
     let imageUrl;
 
     if(S.flow === 'photo' && S.photo) {
-      if(S.style === 'original') {
-        // Original — use the photo as-is, no API call
-        imageUrl = S.photo;
-      } else {
-        // IMAGE-TO-IMAGE: Nano Banana Pro Edit — transform to style
-        imageUrl = await atlasI2I(S.photo, STYLE_PROMPTS[S.style]);
-      }
+      // IMAGE-TO-IMAGE: Nano Banana Pro Edit
+      imageUrl = await atlasI2I(S.photo, STYLE_PROMPTS[S.style]);
     } else {
       // TEXT-TO-IMAGE: Nano Banana T2I
-      imageUrl = await atlasT2I(S.prompt, STYLE_PROMPTS[S.style] || 'high quality digital art');
+      imageUrl = await atlasT2I(S.prompt, STYLE_PROMPTS[S.style]);
     }
 
     S.result = imageUrl;
@@ -611,46 +594,16 @@ async function pollAtlasResult(predId) {
 }
 
 // ═══════════════════════════════════
-// SHOW RESULT — with 2D mockup
+// SHOW RESULT
 // ═══════════════════════════════════
 function showResult() {
   const panel = document.getElementById('resultPanel');
   const styleName = STYLES.find(s=>s.id===S.style)?.label?.replace(/[^\w\sáéíóú]/g,'').trim() || S.style;
-  const productImg = `${SUPABASE_STORAGE}/1-front.png`;
-  
   panel.style.display = 'block';
   panel.innerHTML = `<div class="fadein">
     <div class="res-label">✦ Tu diseño personalizado</div>
     <div class="res-title">Cenicero LED · ${styleName}</div>
-    
-    <!-- MOCKUP 2D: Design applied on product -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-      <!-- Generated design -->
-      <div>
-        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-family:var(--fd);font-weight:700">Diseño generado</div>
-        <div class="res-img"><div class="glow"></div><img src="${S.result}" style="position:relative;z-index:1;border-radius:var(--r)"></div>
-      </div>
-      <!-- Mockup on product -->
-      <div>
-        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-family:var(--fd);font-weight:700">Así queda en tu producto</div>
-        <div style="position:relative;border-radius:var(--r);overflow:hidden;background:var(--bg);aspect-ratio:1/1">
-          <img src="${productImg}" style="width:100%;height:100%;object-fit:contain;position:relative;z-index:2" crossorigin="anonymous">
-          <!-- Design overlay on lid area -->
-          <div style="position:absolute;top:8%;left:22%;width:56%;height:35%;z-index:1;border-radius:50%;overflow:hidden;opacity:.85">
-            <img src="${S.result}" style="width:100%;height:100%;object-fit:cover" crossorigin="anonymous">
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Product real photo -->
-    <div style="display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding:4px 0">
-      <img src="${SUPABASE_STORAGE}/1-front.png" style="height:56px;border-radius:6px;border:2px solid var(--lime);opacity:.9" crossorigin="anonymous" title="Cenicero coche">
-      <img src="${SUPABASE_STORAGE}/2-home-ceni.png" style="height:56px;border-radius:6px;border:2px solid transparent;opacity:.6;cursor:pointer" crossorigin="anonymous" title="Cenicero home">
-      <img src="${SUPABASE_STORAGE}/1-metal.png" style="height:56px;border-radius:6px;border:2px solid transparent;opacity:.6;cursor:pointer" crossorigin="anonymous" title="Mechero">
-      <img src="${SUPABASE_STORAGE}/1-madera%20(1).png" style="height:56px;border-radius:6px;border:2px solid transparent;opacity:.6;cursor:pointer" crossorigin="anonymous" title="Grinder">
-    </div>
-
+    <div class="res-img"><div class="glow"></div><img src="${S.result}" style="position:relative;z-index:1"></div>
     <div class="res-actions">
       <button class="ra ra-retry" onclick="generate()">↻ Otra versión</button>
       <button class="ra ra-order" onclick="toast('Pedido registrado. Te contactamos pronto.','ok')">Pedir → ${getTotal()}€</button>
