@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VIVOgift — Configurador</title>
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#080808;--bg2:#111;--bg3:#1a1a1a;--bg4:#222;
+  --lime:#e8ff47;--lime-dim:#e8ff4720;--lime-mid:#e8ff4740;
+  --text:#f0ede8;--text2:#a09e99;--text3:#666;
+  --radius:14px;--radius-sm:8px;
+  --font-display:'Syne',sans-serif;
+  --font-body:'DM Sans',sans-serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;overflow-x:hidden}
+
+/* ═══ NAV ═══ */
+.nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:16px 28px;display:flex;justify-content:space-between;align-items:center;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);background:rgba(8,8,8,.7);border-bottom:1px solid #ffffff08}
+.logo{display:flex;align-items:center;gap:0;font-family:var(--font-display);font-size:22px;font-weight:800;letter-spacing:-.5px;text-decoration:none;color:var(--text)}
+.logo-o{width:26px;height:26px;border:2px solid var(--lime);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 1px}
+.logo-o svg{width:10px;height:10px;fill:var(--lime)}
+.logo-gift{color:var(--lime);font-weight:400;font-size:20px;letter-spacing:0}
+.nav-right{font-size:13px;color:var(--text2);display:flex;align-items:center;gap:20px}
+.nav-step{color:var(--lime);font-weight:600}
+.nav-link{color:var(--text2);text-decoration:none;transition:color .2s}
+.nav-link:hover{color:var(--lime)}
+
+/* ═══ LAYOUT ═══ */
+.app{display:grid;grid-template-columns:280px 1fr;min-height:100vh;padding-top:62px}
+@media(max-width:900px){.app{grid-template-columns:1fr;}.sidebar{position:fixed;bottom:0;left:0;right:0;z-index:90;max-height:45vh;overflow-y:auto;border-top:1px solid #ffffff10;border-right:none}}
+
+.sidebar{background:var(--bg);border-right:1px solid #ffffff08;padding:24px 20px;overflow-y:auto;display:flex;flex-direction:column;gap:28px}
+.main{background:var(--bg2);display:flex;align-items:center;justify-content:center;padding:32px;position:relative;overflow:hidden}
+.main::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,#e8ff4706 0%,transparent 60%);pointer-events:none}
+
+/* ═══ SIDEBAR SECTIONS ═══ */
+.section-label{font-family:var(--font-display);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--lime);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.section-label::before{content:'';width:8px;height:2px;background:var(--lime);border-radius:1px}
+.section-title{font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px;line-height:1.2}
+
+/* Product Grid */
+.products-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.product-card{background:var(--bg3);border:2px solid transparent;border-radius:var(--radius-sm);padding:8px;cursor:pointer;transition:all .25s;text-align:center;position:relative;overflow:hidden}
+.product-card:hover{border-color:var(--lime-mid);transform:translateY(-2px)}
+.product-card.active{border-color:var(--lime);background:var(--bg4)}
+.product-card img{width:100%;height:72px;object-fit:contain;border-radius:6px;margin-bottom:6px;filter:brightness(.95)}
+.product-card.active img{filter:brightness(1.1)}
+.product-name{font-size:11px;font-weight:600;color:var(--text);line-height:1.2}
+.product-price{font-size:10px;color:var(--lime);margin-top:2px}
+.product-badge{position:absolute;top:4px;right:4px;background:var(--lime);color:var(--bg);font-size:8px;font-weight:700;padding:2px 5px;border-radius:4px;letter-spacing:.5px}
+
+/* Style Pills */
+.styles-wrap{display:flex;flex-wrap:wrap;gap:6px}
+.style-pill{padding:6px 12px;border-radius:20px;border:1.5px solid #ffffff15;background:transparent;color:var(--text2);font-size:11px;font-family:var(--font-body);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:5px}
+.style-pill:hover{border-color:var(--lime-mid);color:var(--text)}
+.style-pill.active{border-color:var(--lime);background:var(--lime-dim);color:var(--lime);font-weight:600}
+
+/* Upload Zone */
+.upload-zone{border:2px dashed #ffffff15;border-radius:var(--radius);padding:20px 14px;text-align:center;cursor:pointer;transition:all .3s;position:relative;overflow:hidden}
+.upload-zone:hover{border-color:var(--lime-mid);background:#ffffff04}
+.upload-zone.has-file{border-color:var(--lime);border-style:solid;background:var(--lime-dim)}
+.upload-icon{font-size:28px;margin-bottom:6px;opacity:.5}
+.upload-text{font-size:12px;color:var(--text2);line-height:1.4}
+.upload-text b{color:var(--lime)}
+.upload-preview{width:100%;max-height:100px;object-fit:contain;border-radius:8px;margin-top:8px}
+.upload-clear{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.7);border:1px solid #ffffff20;color:var(--text);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.upload-clear:hover{background:var(--lime);color:var(--bg)}
+
+/* Prompt Input */
+.prompt-area{width:100%;min-height:80px;background:var(--bg3);border:1.5px solid #ffffff10;border-radius:var(--radius-sm);padding:12px;font-family:var(--font-body);font-size:13px;color:var(--text);resize:vertical;outline:none;transition:border-color .2s}
+.prompt-area:focus{border-color:var(--lime)}
+.prompt-area::placeholder{color:var(--text3)}
+.prompt-hint{font-size:10px;color:var(--text3);margin-top:6px;line-height:1.4}
+
+/* Generate Button */
+.btn-generate{width:100%;padding:14px;background:var(--lime);color:var(--bg);font-family:var(--font-display);font-size:14px;font-weight:700;border:none;border-radius:var(--radius-sm);cursor:pointer;transition:all .25s;letter-spacing:.5px;text-transform:uppercase;position:relative;overflow:hidden}
+.btn-generate:hover{transform:translateY(-1px);box-shadow:0 8px 30px #e8ff4730}
+.btn-generate:active{transform:scale(.98)}
+.btn-generate:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-generate .spinner{display:none;width:18px;height:18px;border:2.5px solid transparent;border-top-color:var(--bg);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto}
+.btn-generate.loading .spinner{display:block}
+.btn-generate.loading .btn-text{display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ═══ MAIN PANEL STATES ═══ */
+.preview-container{width:100%;max-width:560px;position:relative;z-index:1}
+
+/* Empty State */
+.state-empty{text-align:center;padding:40px 20px}
+.state-empty-icon{font-size:64px;margin-bottom:20px;opacity:.15}
+.state-empty h3{font-family:var(--font-display);font-size:20px;font-weight:700;margin-bottom:10px;color:var(--text)}
+.state-empty p{font-size:13px;color:var(--text3);line-height:1.6;max-width:320px;margin:0 auto}
+
+/* Loading State */
+.state-loading{text-align:center;padding:40px 20px}
+.loader-ring{width:56px;height:56px;border:3px solid #ffffff10;border-top-color:var(--lime);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 20px}
+.state-loading h3{font-family:var(--font-display);font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px}
+.state-loading p{font-size:12px;color:var(--text3)}
+.loading-steps{margin-top:20px;text-align:left;max-width:280px;margin-left:auto;margin-right:auto}
+.loading-step{font-size:12px;padding:6px 0;color:var(--text3);display:flex;align-items:center;gap:8px;transition:color .3s}
+.loading-step.active{color:var(--lime)}
+.loading-step.done{color:var(--text2)}
+.loading-step::before{content:'○';font-size:10px}
+.loading-step.active::before{content:'◉';color:var(--lime)}
+.loading-step.done::before{content:'✓';color:var(--lime)}
+
+/* Result State */
+.state-result{animation:fadeUp .5s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+.result-header{text-align:center;margin-bottom:20px}
+.result-label{font-family:var(--font-display);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--lime);margin-bottom:6px}
+.result-title{font-family:var(--font-display);font-size:22px;font-weight:800;color:var(--text)}
+
+/* Product with design overlay */
+.mockup-container{position:relative;width:100%;aspect-ratio:1/1;max-width:460px;margin:0 auto;border-radius:var(--radius);overflow:hidden;background:var(--bg)}
+
+/* Layer system from Nano Bana */
+.mockup-layer{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.layer-design{z-index:1;opacity:0;transition:opacity .5s}
+.layer-design.visible{opacity:1}
+.layer-base{z-index:2}
+.layer-shadow{z-index:3;mix-blend-mode:multiply}
+.layer-highlight{z-index:4;mix-blend-mode:screen}
+
+/* Design-only preview (fallback when no layers) */
+.design-preview{width:100%;border-radius:var(--radius);overflow:hidden;position:relative}
+.design-preview img{width:100%;display:block;border-radius:var(--radius)}
+.design-glow{position:absolute;inset:-20%;background:radial-gradient(ellipse,var(--lime-dim),transparent 70%);pointer-events:none;filter:blur(40px);z-index:0}
+
+/* Product info card */
+.product-info-card{display:flex;align-items:center;gap:14px;background:var(--bg3);border:1px solid #ffffff08;border-radius:var(--radius-sm);padding:14px 16px;margin-top:16px}
+.product-info-card img{width:52px;height:52px;object-fit:contain;border-radius:8px}
+.product-info-text h4{font-family:var(--font-display);font-size:14px;font-weight:700;color:var(--text)}
+.product-info-text p{font-size:11px;color:var(--text2);margin-top:2px}
+
+/* Action buttons */
+.result-actions{display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap}
+.btn-action{padding:10px 20px;border-radius:var(--radius-sm);font-family:var(--font-body);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;border:1.5px solid}
+.btn-retry{background:transparent;border-color:#ffffff15;color:var(--text2)}
+.btn-retry:hover{border-color:var(--lime-mid);color:var(--text)}
+.btn-adjust{background:transparent;border-color:#ffffff15;color:var(--text2)}
+.btn-adjust:hover{border-color:var(--lime-mid);color:var(--text)}
+.btn-order{background:var(--lime);border-color:var(--lime);color:var(--bg);font-weight:700;font-family:var(--font-display);letter-spacing:.3px}
+.btn-order:hover{transform:translateY(-1px);box-shadow:0 6px 20px #e8ff4730}
+
+/* Order summary */
+.order-summary{background:var(--bg3);border:1px solid #ffffff08;border-radius:var(--radius-sm);padding:16px;margin-top:14px}
+.summary-row{display:flex;justify-content:space-between;font-size:12px;padding:5px 0;color:var(--text2)}
+.summary-row span:last-child{color:var(--text);font-weight:500}
+.summary-total{display:flex;justify-content:space-between;font-size:14px;padding:10px 0 0;margin-top:6px;border-top:1px solid #ffffff10;color:var(--text);font-family:var(--font-display);font-weight:700}
+.summary-total span:last-child{color:var(--lime)}
+.summary-note{font-size:10px;color:var(--text3);text-align:center;margin-top:8px}
+
+/* Extras toggles */
+.extras-section{margin-top:6px}
+.extra-toggle{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #ffffff06}
+.extra-toggle:last-child{border:none}
+.extra-info{display:flex;flex-direction:column;gap:2px}
+.extra-name{font-size:12px;font-weight:500;color:var(--text)}
+.extra-desc{font-size:10px;color:var(--text3)}
+.extra-price{font-size:11px;color:var(--lime);font-weight:600;margin-right:10px}
+.toggle-switch{width:38px;height:22px;background:var(--bg4);border-radius:11px;cursor:pointer;position:relative;transition:background .2s;border:1.5px solid #ffffff15;flex-shrink:0}
+.toggle-switch.on{background:var(--lime);border-color:var(--lime)}
+.toggle-switch::after{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:var(--text);top:2px;left:2px;transition:transform .2s}
+.toggle-switch.on::after{transform:translateX(16px);background:var(--bg)}
+
+/* 3D viewer */
+.viewer-3d-container{width:100%;aspect-ratio:1/1;max-width:460px;margin:0 auto;border-radius:var(--radius);overflow:hidden;background:var(--bg)}
+model-viewer{width:100%;height:100%;--poster-color:transparent}
+
+/* API Key Modal */
+.modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.85);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s}
+.modal-overlay.show{opacity:1;pointer-events:all}
+.modal{background:var(--bg2);border:1px solid #ffffff10;border-radius:var(--radius);padding:32px;max-width:420px;width:90%;position:relative}
+.modal h3{font-family:var(--font-display);font-size:18px;font-weight:700;margin-bottom:6px}
+.modal p{font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.5}
+.modal input{width:100%;padding:12px 14px;background:var(--bg3);border:1.5px solid #ffffff15;border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:13px;outline:none;margin-bottom:12px}
+.modal input:focus{border-color:var(--lime)}
+.modal-btn{width:100%;padding:12px;background:var(--lime);color:var(--bg);font-family:var(--font-display);font-weight:700;font-size:13px;border:none;border-radius:var(--radius-sm);cursor:pointer;transition:all .2s}
+.modal-btn:hover{box-shadow:0 4px 16px #e8ff4730}
+.modal-close{position:absolute;top:14px;right:14px;width:28px;height:28px;border-radius:50%;background:var(--bg3);border:1px solid #ffffff10;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .2s}
+.modal-close:hover{background:var(--lime);color:var(--bg)}
+.modal-note{font-size:10px;color:var(--text3);margin-top:10px;line-height:1.4;text-align:center}
+
+/* Error toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#ff4444;color:#fff;padding:12px 24px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;z-index:300;transition:transform .3s;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="#" class="logo">
+    VIV<span class="logo-o"><svg viewBox="0 0 24 24"><polygon points="9,6 9,18 19,12"/></svg></span><span class="logo-gift">gift</span>
+  </a>
+  <div class="nav-right">
+    <span>Configurador · <span class="nav-step" id="navStep">Paso 1 de 5</span></span>
+    <a href="#" class="nav-link">← Tienda</a>
+  </div>
+</nav>
+
+<!-- API KEY MODAL -->
+<div class="modal-overlay" id="apiModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <h3>Conectar con OpenAI</h3>
+    <p>Para generar diseños personalizados necesitamos tu API key. Se guarda solo en tu navegador.</p>
+    <input type="password" id="apiKeyInput" placeholder="sk-..." autocomplete="off">
+    <button class="modal-btn" onclick="saveApiKey()">Conectar</button>
+    <p class="modal-note">Tu key nunca sale de tu navegador. No la almacenamos en ningún servidor.</p>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- APP -->
+<div class="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+    
+    <!-- PASO 1: Producto -->
+    <div>
+      <div class="section-label">Paso 1</div>
+      <div class="section-title">Elige el producto</div>
+      <div class="products-grid" id="productsGrid"></div>
+    </div>
+
+    <!-- PASO 2: Estilo -->
+    <div>
+      <div class="section-label">Paso 2</div>
+      <div class="section-title">Estilo del diseño</div>
+      <div class="styles-wrap" id="stylesWrap"></div>
+    </div>
+
+    <!-- PASO 3: Foto -->
+    <div>
+      <div class="section-label">Paso 3</div>
+      <div class="section-title">Tu foto o idea</div>
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+        <div class="upload-icon">📷</div>
+        <div class="upload-text"><b>Sube tu foto</b><br>Mascota, pareja, personaje, lo que quieras</div>
+        <input type="file" id="fileInput" accept="image/*" style="display:none">
+      </div>
+    </div>
+
+    <!-- PASO 4: Descripción -->
+    <div>
+      <div class="section-label">Paso 4</div>
+      <div class="section-title">Describe lo que quieres</div>
+      <textarea class="prompt-area" id="promptArea" placeholder="Ejemplo: Un dragón dorado estilo japonés con fondo negro y detalles en rojo..."></textarea>
+      <div class="prompt-hint">Cuanto más detalle des, mejor será el resultado. Si subiste foto, di cómo quieres que aparezca.</div>
+    </div>
+
+    <!-- PASO 5: Extras -->
+    <div>
+      <div class="section-label">Paso 5</div>
+      <div class="section-title">Personaliza tu experiencia</div>
+      <div class="extras-section" id="extrasSection">
+        <div class="extra-toggle">
+          <div class="extra-info">
+            <span class="extra-name">QR en producto</span>
+            <span class="extra-desc">Escanea y escucha un mensaje</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="extra-price">Incluido</span>
+            <div class="toggle-switch on" data-extra="qr_product" onclick="toggleExtra(this)"></div>
+          </div>
+        </div>
+        <div class="extra-toggle">
+          <div class="extra-info">
+            <span class="extra-name">QR en caja</span>
+            <span class="extra-desc">Imagen o video sorpresa al abrir</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="extra-price">+3€</span>
+            <div class="toggle-switch" data-extra="qr_box" data-price="3" onclick="toggleExtra(this)"></div>
+          </div>
+        </div>
+        <div class="extra-toggle">
+          <div class="extra-info">
+            <span class="extra-name">Módulo de sonido</span>
+            <span class="extra-desc">La caja suena al abrirla</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="extra-price">+15€</span>
+            <div class="toggle-switch" data-extra="sound_module" data-price="15" onclick="toggleExtra(this)"></div>
+          </div>
+        </div>
+        <div class="extra-toggle">
+          <div class="extra-info">
+            <span class="extra-name">Caja personalizada</span>
+            <span class="extra-desc">Tu diseño también en la caja</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="extra-price">+5€</span>
+            <div class="toggle-switch" data-extra="custom_box" data-price="5" onclick="toggleExtra(this)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GENERATE -->
+    <button class="btn-generate" id="btnGenerate" onclick="generateDesign()">
+      <span class="btn-text">✦ Crear mi diseño</span>
+      <div class="spinner"></div>
+    </button>
+  </div>
+
+  <!-- MAIN PREVIEW -->
+  <div class="main">
+    <div class="preview-container" id="previewContainer">
+      <!-- Filled dynamically -->
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════════
+const PRODUCTS = [
+  {
+    id: 'cenicero_led',
+    name: 'Cenicero LED',
+    price: 20,
+    badge: 'NEW',
+    // Use embedded placeholder — replace src with your real product photo paths when on GitHub
+    img: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect fill="%23111" width="200" height="200" rx="12"/><text x="100" y="90" text-anchor="middle" fill="%23555" font-size="40">🚬</text><text x="100" y="130" text-anchor="middle" fill="%23888" font-size="12">Cenicero LED</text></svg>'),
+    // Set these to your actual image paths when hosted:
+    // img: './images/1-front.png',
+    // layers: { base: './layers/cenicero/base.png', shadow: './layers/cenicero/shadow.png', highlight: './layers/cenicero/highlight.png', mask: './layers/cenicero/mask.png' },
+    // glb: './cenicero.glb',  // Your Meshy export
+    has3d: true,
+    promptHint: 'circular design for the top lid of a portable car ashtray'
+  },
+  {
+    id: 'mechero',
+    name: 'Mechero Custom',
+    price: 14,
+    img: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect fill="%23111" width="200" height="200" rx="12"/><text x="100" y="90" text-anchor="middle" fill="%23555" font-size="40">🔥</text><text x="100" y="130" text-anchor="middle" fill="%23888" font-size="12">Mechero</text></svg>'),
+    promptHint: 'design for the flat side panel of a metallic lighter'
+  },
+  {
+    id: 'grinder',
+    name: 'Grinder Natural',
+    price: 22,
+    img: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect fill="%23111" width="200" height="200" rx="12"/><text x="100" y="90" text-anchor="middle" fill="%23555" font-size="40">🌿</text><text x="100" y="130" text-anchor="middle" fill="%23888" font-size="12">Grinder</text></svg>'),
+    promptHint: 'circular design for the flat wooden top of a grinder'
+  },
+  {
+    id: 'posavasos',
+    name: 'Posavasos',
+    price: 18,
+    img: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect fill="%23111" width="200" height="200" rx="12"/><text x="100" y="90" text-anchor="middle" fill="%23555" font-size="40">🪨</text><text x="100" y="130" text-anchor="middle" fill="%23888" font-size="12">Posavasos</text></svg>'),
+    promptHint: 'square design for a coaster surface'
+  }
+];
+
+const STYLES = [
+  { id: 'anime', label: '✨ Anime', prompt: 'anime/manga art style with bold outlines and vivid colors' },
+  { id: 'realistic', label: '📸 Realista', prompt: 'photorealistic hyper-detailed style' },
+  { id: 'minimal', label: '◻ Minimal', prompt: 'minimalist clean design with simple shapes and muted tones' },
+  { id: 'watercolor', label: '🎨 Acuarela', prompt: 'soft watercolor painting style with bleeding edges' },
+  { id: 'pop', label: '🎯 Pop Art', prompt: 'bold pop art style with halftone dots and strong contrast' },
+  { id: 'pixel', label: '👾 Pixel', prompt: 'retro pixel art 16-bit style' },
+  { id: 'dark', label: '🌙 Dark', prompt: 'dark gothic moody style with deep shadows and dramatic lighting' },
+  { id: 'cartoon', label: '🎬 Cartoon', prompt: 'fun cartoon illustration style with thick outlines and bright colors' }
+];
+
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let state = {
+  product: PRODUCTS[0],
+  style: STYLES[0],
+  photo: null,        // base64
+  photoFile: null,
+  prompt: '',
+  extras: { qr_product: true, qr_box: false, sound_module: false, custom_box: false },
+  generatedImage: null,
+  apiKey: null
+};
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+function init() {
+  // Try to load API key from memory
+  try { state.apiKey = sessionStorage.getItem('vg_key'); } catch(e) {}
+  
+  renderProducts();
+  renderStyles();
+  renderPreview();
+  setupUpload();
+}
+
+function renderProducts() {
+  const grid = document.getElementById('productsGrid');
+  grid.innerHTML = PRODUCTS.map(p => `
+    <div class="product-card ${p.id === state.product.id ? 'active' : ''}" onclick="selectProduct('${p.id}')">
+      ${p.badge ? `<span class="product-badge">${p.badge}</span>` : ''}
+      <img src="${p.img}" alt="${p.name}">
+      <div class="product-name">${p.name}</div>
+      <div class="product-price">desde ${p.price}€</div>
+    </div>
+  `).join('');
+}
+
+function renderStyles() {
+  const wrap = document.getElementById('stylesWrap');
+  wrap.innerHTML = STYLES.map(s => `
+    <div class="style-pill ${s.id === state.style.id ? 'active' : ''}" onclick="selectStyle('${s.id}')">${s.label}</div>
+  `).join('');
+}
+
+function selectProduct(id) {
+  state.product = PRODUCTS.find(p => p.id === id);
+  state.generatedImage = null;
+  renderProducts();
+  renderPreview();
+  updateStep();
+}
+
+function selectStyle(id) {
+  state.style = STYLES.find(s => s.id === id);
+  renderStyles();
+  updateStep();
+}
+
+function setupUpload() {
+  const zone = document.getElementById('uploadZone');
+  const input = document.getElementById('fileInput');
+  
+  // Drag & drop
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.borderColor = 'var(--lime)'; });
+  zone.addEventListener('dragleave', () => { zone.style.borderColor = ''; });
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.style.borderColor = '';
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  });
+  
+  input.addEventListener('change', e => {
+    if (e.target.files[0]) handleFile(e.target.files[0]);
+  });
+}
+
+function handleFile(file) {
+  if (!file.type.startsWith('image/')) return;
+  state.photoFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    state.photo = e.target.result;
+    const zone = document.getElementById('uploadZone');
+    zone.classList.add('has-file');
+    zone.innerHTML = `
+      <button class="upload-clear" onclick="event.stopPropagation(); clearPhoto()">×</button>
+      <img class="upload-preview" src="${state.photo}" alt="Tu foto">
+    `;
+    updateStep();
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearPhoto() {
+  state.photo = null;
+  state.photoFile = null;
+  const zone = document.getElementById('uploadZone');
+  zone.classList.remove('has-file');
+  zone.innerHTML = `
+    <div class="upload-icon">📷</div>
+    <div class="upload-text"><b>Sube tu foto</b><br>Mascota, pareja, personaje, lo que quieras</div>
+    <input type="file" id="fileInput" accept="image/*" style="display:none">
+  `;
+  setupUpload();
+}
+
+function toggleExtra(el) {
+  const key = el.dataset.extra;
+  if (key === 'qr_product') return; // always on
+  el.classList.toggle('on');
+  state.extras[key] = el.classList.contains('on');
+  renderOrderSummary();
+}
+
+function getTotal() {
+  let total = state.product.price;
+  if (state.extras.qr_box) total += 3;
+  if (state.extras.sound_module) total += 15;
+  if (state.extras.custom_box) total += 5;
+  return total;
+}
+
+function updateStep() {
+  const step = state.generatedImage ? 5 : state.prompt || state.photo ? 4 : 2;
+  document.getElementById('navStep').textContent = `Paso ${step} de 5`;
+}
+
+// ══════════════════════════════════════════════
+// PREVIEW RENDERING
+// ══════════════════════════════════════════════
+function renderPreview() {
+  const container = document.getElementById('previewContainer');
+  
+  if (state.generatedImage) {
+    renderResult(container);
+  } else {
+    renderEmpty(container);
+  }
+}
+
+function renderEmpty(container) {
+  container.innerHTML = `
+    <div class="state-empty">
+      <div class="state-empty-icon">✦</div>
+      <h3>Tu diseño aparecerá aquí</h3>
+      <p>Elige un producto, sube tu foto o describe tu idea, y la IA creará un diseño único para ti.</p>
+    </div>
+  `;
+}
+
+function renderLoading(container) {
+  container.innerHTML = `
+    <div class="state-loading">
+      <div class="loader-ring"></div>
+      <h3>Creando tu diseño...</h3>
+      <p>${state.product.name} · ${state.style.label}</p>
+      <div class="loading-steps">
+        <div class="loading-step active" id="ls1">${state.photo ? 'Analizando tu foto' : 'Preparando el diseño'}</div>
+        <div class="loading-step" id="ls2">Generando con IA</div>
+        <div class="loading-step" id="ls3">Aplicando al producto</div>
+      </div>
+    </div>
+  `;
+  
+  // Animate steps
+  setTimeout(() => {
+    const s1 = document.getElementById('ls1');
+    const s2 = document.getElementById('ls2');
+    if (s1 && s2) { s1.classList.remove('active'); s1.classList.add('done'); s2.classList.add('active'); }
+  }, state.photo ? 4000 : 1500);
+  
+  setTimeout(() => {
+    const s2 = document.getElementById('ls2');
+    const s3 = document.getElementById('ls3');
+    if (s2 && s3) { s2.classList.remove('active'); s2.classList.add('done'); s3.classList.add('active'); }
+  }, state.photo ? 8000 : 5000);
+}
+
+function renderResult(container) {
+  container.innerHTML = `
+    <div class="state-result">
+      <div class="result-header">
+        <div class="result-label">✦ Tu diseño personalizado</div>
+        <div class="result-title">${state.product.name} · ${state.style.label.replace(/[^\w\s]/g,'').trim()}</div>
+      </div>
+      
+      <div class="design-preview">
+        <div class="design-glow"></div>
+        <img src="${state.generatedImage}" alt="Diseño generado" style="position:relative;z-index:1">
+      </div>
+      
+      <div class="product-info-card">
+        <img src="${state.product.img}" alt="${state.product.name}">
+        <div class="product-info-text">
+          <h4>Se imprime sobre: ${state.product.name}</h4>
+          <p>Producción artesanal · Envío 24-48h</p>
+        </div>
+      </div>
+      
+      <div class="result-actions">
+        <button class="btn-action btn-retry" onclick="generateDesign()">↻ Otra versión</button>
+        <button class="btn-action btn-adjust" onclick="focusPrompt()">✎ Ajustar</button>
+        <button class="btn-action btn-order" onclick="showToast('Pedido registrado. Te contactamos pronto.')">Pedir → ${getTotal()}€</button>
+      </div>
+      
+      <div class="order-summary" id="orderSummary"></div>
+    </div>
+  `;
+  renderOrderSummary();
+}
+
+function renderOrderSummary() {
+  const el = document.getElementById('orderSummary');
+  if (!el) return;
+  let rows = `<div class="summary-row"><span>Producto</span><span>${state.product.name}</span></div>`;
+  rows += `<div class="summary-row"><span>Estilo</span><span>${state.style.label.replace(/[^\w\s]/g,'').trim()}</span></div>`;
+  rows += `<div class="summary-row"><span>QR en producto</span><span>Incluido ✓</span></div>`;
+  if (state.extras.qr_box) rows += `<div class="summary-row"><span>QR en caja</span><span>+3€</span></div>`;
+  if (state.extras.sound_module) rows += `<div class="summary-row"><span>Módulo de sonido</span><span>+15€</span></div>`;
+  if (state.extras.custom_box) rows += `<div class="summary-row"><span>Caja personalizada</span><span>+5€</span></div>`;
+  rows += `<div class="summary-total"><span>Total</span><span>${getTotal()}€</span></div>`;
+  rows += `<div class="summary-note">QR personalizado incluido · Envío 24-48h</div>`;
+  el.innerHTML = rows;
+}
+
+function focusPrompt() {
+  document.getElementById('promptArea').focus();
+  document.getElementById('sidebar').scrollTop = document.getElementById('promptArea').offsetTop - 100;
+}
+
+// ══════════════════════════════════════════════
+// AI GENERATION
+// ══════════════════════════════════════════════
+async function generateDesign() {
+  // Check API key
+  if (!state.apiKey) {
+    document.getElementById('apiModal').classList.add('show');
+    return;
+  }
+  
+  state.prompt = document.getElementById('promptArea').value.trim();
+  
+  if (!state.prompt && !state.photo) {
+    showToast('Sube una foto o describe lo que quieres');
+    return;
+  }
+  
+  const btn = document.getElementById('btnGenerate');
+  btn.classList.add('loading');
+  btn.disabled = true;
+  
+  const container = document.getElementById('previewContainer');
+  renderLoading(container);
+  
+  try {
+    let designPrompt = '';
+    
+    // STEP 1: If photo uploaded, use GPT-4o Vision to describe it
+    if (state.photo) {
+      const description = await describePhoto(state.photo);
+      designPrompt = `Based on this person/subject: ${description}. `;
+    }
+    
+    // Add user prompt
+    if (state.prompt) {
+      designPrompt += state.prompt + '. ';
+    } else if (!state.photo) {
+      designPrompt = 'Creative unique design. ';
+    }
+    
+    // STEP 2: Generate with DALL-E 3
+    const imageUrl = await generateWithDallE3(designPrompt);
+    
+    state.generatedImage = imageUrl;
+    renderResult(container);
+    updateStep();
+    
+  } catch (err) {
+    console.error('Generation error:', err);
+    showToast('Error al generar. Verifica tu API key e inténtalo de nuevo.');
+    renderEmpty(container);
+  } finally {
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+}
+
+async function describePhoto(base64Data) {
+  // Extract pure base64 (remove data:image/xxx;base64, prefix)
+  const pureBase64 = base64Data.split(',')[1] || base64Data;
+  
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${state.apiKey}`
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'image_url',
+            image_url: { url: `data:image/jpeg;base64,${pureBase64}`, detail: 'low' }
+          },
+          {
+            type: 'text',
+            text: 'Describe this image in vivid detail for an illustrator. Focus on the main subject: their appearance, expression, clothing, colors, pose, any pets or objects. Be specific about facial features, hair, and distinguishing characteristics. Keep it to 2-3 sentences. Do NOT mention it is a photo — describe as if describing a character to draw.'
+          }
+        ]
+      }],
+      max_tokens: 300
+    })
+  });
+  
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error?.message || 'GPT-4o Vision failed');
+  }
+  
+  const data = await response.json();
+  return data.choices[0].message.content;
+}
+
+async function generateWithDallE3(designPrompt) {
+  const fullPrompt = `Create a ${state.style.prompt} illustration. ${designPrompt} This design will be printed as a ${state.product.promptHint}. Make it visually striking with a dark/black background. The design should fill the entire image with no borders or frames. High quality, vibrant colors, professional print-ready design.`;
+  
+  const response = await fetch('https://api.openai.com/v1/images/generations', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${state.apiKey}`
+    },
+    body: JSON.stringify({
+      model: 'dall-e-3',
+      prompt: fullPrompt,
+      n: 1,
+      size: '1024x1024',
+      quality: 'hd',
+      response_format: 'url'
+    })
+  });
+  
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error?.message || 'DALL-E 3 generation failed');
+  }
+  
+  const data = await response.json();
+  return data.data[0].url;
+}
+
+// ══════════════════════════════════════════════
+// API KEY MANAGEMENT
+// ══════════════════════════════════════════════
+function saveApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key.startsWith('sk-')) {
+    showToast('La key debe empezar con sk-');
+    return;
+  }
+  state.apiKey = key;
+  try { sessionStorage.setItem('vg_key', key); } catch(e) {}
+  closeModal();
+  showToast('Conectado correctamente');
+}
+
+function closeModal() {
+  document.getElementById('apiModal').classList.remove('show');
+}
+
+// ══════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// ══════════════════════════════════════════════
+// PROMPT SYNC
+// ══════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  init();
+  document.getElementById('promptArea').addEventListener('input', e => {
+    state.prompt = e.target.value;
+    updateStep();
+  });
+});
+</script>
+
+</body>
+</html>
