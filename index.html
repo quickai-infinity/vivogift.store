@@ -666,7 +666,6 @@ function applyTextureToModel(model, texture) {
   model.traverse((child) => { if(child.isMesh) meshes.push(child); });
   
   if(!texture) {
-    // Restore originals
     meshes.forEach(m => {
       const orig = originalMaterials.get(m.uuid);
       if(orig) { m.material = orig.clone(); m.material.needsUpdate = true; }
@@ -674,19 +673,63 @@ function applyTextureToModel(model, texture) {
     return;
   }
   
-  // Image is already cropped to print dimensions — apply directly
   texture.wrapS = THREE.ClampToEdgeWrapping;
   texture.wrapT = THREE.ClampToEdgeWrapping;
   texture.needsUpdate = true;
   
-  meshes.forEach(mesh => {
-    const orig = originalMaterials.get(mesh.uuid);
-    mesh.material = orig ? orig.clone() : mesh.material.clone();
-    mesh.material.map = texture;
-    mesh.material.needsUpdate = true;
+  const zones = S.selectedZones;
+  
+  // Zone-to-mesh mapping: which mesh names should get the texture
+  // Mesh names from Blender: "tapa", "cuerpo", "bordes", "tapa_sup", "tapa_inf", etc.
+  const zoneToMesh = {
+    'tapa': ['tapa'],
+    'tapa_sup': ['tapa', 'tapa_sup'],
+    'tapa_inf': ['tapa_inf'],
+    'bordes': ['cuerpo', 'bordes', 'body'],
+    'cuerpo': ['cuerpo', 'body'],
+    'cara_sup': ['tapa', 'cara_sup', 'top'],
+    'cara_inf': ['tapa_inf', 'cara_inf', 'bottom']
+  };
+  
+  // Build list of mesh names that should receive texture
+  const targetNames = new Set();
+  zones.forEach(zone => {
+    const names = zoneToMesh[zone] || [zone];
+    names.forEach(n => targetNames.add(n.toLowerCase()));
   });
   
-  console.log(`✦ Texture applied to 3D (${meshes.length} meshes)`);
+  let applied = 0;
+  meshes.forEach(mesh => {
+    const meshName = (mesh.name || '').toLowerCase();
+    const orig = originalMaterials.get(mesh.uuid);
+    
+    // Check if this mesh matches any target zone
+    const isTarget = targetNames.has(meshName) || 
+      [...targetNames].some(t => meshName.includes(t));
+    
+    if(isTarget) {
+      mesh.material = orig ? orig.clone() : mesh.material.clone();
+      mesh.material.map = texture;
+      mesh.material.needsUpdate = true;
+      applied++;
+    } else {
+      // Restore original material
+      if(orig) { mesh.material = orig.clone(); mesh.material.needsUpdate = true; }
+    }
+  });
+  
+  // Fallback: if no mesh matched (single mesh models), apply to all
+  if(applied === 0 && meshes.length > 0) {
+    meshes.forEach(mesh => {
+      mesh.material = mesh.material.clone();
+      mesh.material.map = texture;
+      mesh.material.needsUpdate = true;
+    });
+    applied = meshes.length;
+    console.log(`✦ No mesh name match — applied to all ${applied} meshes (fallback)`);
+  } else {
+    console.log(`✦ Texture applied to ${applied}/${meshes.length} meshes (zones: ${zones.join(', ')})`);
+  }
 }
 
 // Called when design is generated
