@@ -351,7 +351,10 @@ const PRODUCTS = [
     badge: 'NEW',
     img: SUPABASE_STORAGE + '/1-front.png',
     glb: SUPABASE_STORAGE + '/cenicero.glb',
-    zones: [{id:'tapa',name:'Tapa',icon:'⬆',default:true},{id:'bordes',name:'Bordes',icon:'◯'}],
+    zones: [
+      {id:'tapa',name:'Tapa',icon:'⬆',default:true, print:{w_mm:50,h_mm:50,shape:'circle'}},
+      {id:'bordes',name:'Bordes',icon:'◯', print:{w_mm:157,h_mm:30,shape:'rect'}} // circumference x height
+    ],
     promptCtx: 'circular design for the lid of a portable car ashtray',
     printSize: 'Ø 5cm (tapa)',
     mockup: {top:'8%',left:'22%',width:'56%',height:'35%',borderRadius:'50%',transform:'perspective(400px) rotateX(55deg)'}
@@ -362,7 +365,9 @@ const PRODUCTS = [
     price: 14,
     img: SUPABASE_STORAGE + '/1-metal.png',
     glb: SUPABASE_STORAGE + '/mechero.glb',
-    zones: [{id:'cuerpo',name:'Cuerpo',icon:'▮',default:true}],
+    zones: [
+      {id:'cuerpo',name:'Cuerpo',icon:'▮',default:true, print:{w_mm:25,h_mm:78.5,shape:'rect'}}
+    ],
     promptCtx: 'design for the flat rectangular side panel of a metallic lighter',
     printSize: '25mm × 78.5mm',
     mockup: {top:'15%',left:'30%',width:'40%',height:'55%',borderRadius:'4px',transform:'perspective(400px) rotateY(-5deg)'}
@@ -373,7 +378,11 @@ const PRODUCTS = [
     price: 22,
     img: SUPABASE_STORAGE + '/1-madera%20(1).png',
     glb: SUPABASE_STORAGE + '/grinder.glb',
-    zones: [{id:'tapa_sup',name:'Tapa superior',icon:'⬆',default:true},{id:'tapa_inf',name:'Tapa inferior',icon:'⬇'},{id:'bordes',name:'Bordes',icon:'◯'}],
+    zones: [
+      {id:'tapa_sup',name:'Tapa superior',icon:'⬆',default:true, print:{w_mm:55,h_mm:55,shape:'circle'}},
+      {id:'tapa_inf',name:'Tapa inferior',icon:'⬇', print:{w_mm:55,h_mm:55,shape:'circle'}},
+      {id:'bordes',name:'Bordes',icon:'◯', print:{w_mm:172,h_mm:15,shape:'rect'}}
+    ],
     promptCtx: 'circular design for the flat wooden top of a grinder',
     printSize: 'Ø 55mm (tapa)',
     mockup: {top:'5%',left:'15%',width:'70%',height:'40%',borderRadius:'50%',transform:'perspective(400px) rotateX(30deg)'}
@@ -384,7 +393,10 @@ const PRODUCTS = [
     price: 18,
     img: SUPABASE_STORAGE + '/1-1-black.png',
     glb: SUPABASE_STORAGE + '/portavaso.glb',
-    zones: [{id:'cara_sup',name:'Cara superior',icon:'⬆',default:true},{id:'cara_inf',name:'Cara inferior',icon:'⬇'}],
+    zones: [
+      {id:'cara_sup',name:'Cara superior',icon:'⬆',default:true, print:{w_mm:80,h_mm:80,shape:'circle'}},
+      {id:'cara_inf',name:'Cara inferior',icon:'⬇', print:{w_mm:80,h_mm:80,shape:'circle'}}
+    ],
     promptCtx: 'circular design for a round coaster surface',
     printSize: 'Ø 8cm (cara)',
     mockup: {top:'18%',left:'10%',width:'50%',height:'40%',borderRadius:'50%',transform:'perspective(400px) rotateX(45deg)'}
@@ -650,12 +662,10 @@ function load3DModel(url) {
 function applyTextureToModel(model, texture) {
   if(!model) return;
   
-  // Collect all meshes
   const meshes = [];
   model.traverse((child) => { if(child.isMesh) meshes.push(child); });
   
   if(!texture) {
-    // Restore all originals
     meshes.forEach(m => {
       const orig = originalMaterials.get(m.uuid);
       if(orig) { m.material = orig.clone(); m.material.needsUpdate = true; }
@@ -663,56 +673,80 @@ function applyTextureToModel(model, texture) {
     return;
   }
   
-  // Determine which meshes to texture based on selected zones
-  // Strategy: for models with multiple meshes, try to match by name/position
-  // For Meshy models: usually the top/lid mesh has highest Y position
+  // UV mapping per product+zone — controls where the texture appears
+  // repeat = how much of the texture is visible (smaller = more zoomed in)
+  // offset = position of the texture on the UV map
   const zones = S.selectedZones;
+  const pid = S.product.id;
   
-  meshes.forEach((mesh, idx) => {
-    // Get mesh center Y to determine if it's top or bottom
-    const meshBox = new THREE.Box3().setFromObject(mesh);
-    const meshCenterY = (meshBox.min.y + meshBox.max.y) / 2;
-    const modelBox = new THREE.Box3().setFromObject(model);
-    const modelMidY = (modelBox.min.y + modelBox.max.y) / 2;
-    const isTopHalf = meshCenterY > modelMidY;
-    const name = (mesh.name || '').toLowerCase();
-    
-    let shouldTexture = false;
-    
-    // Zone matching logic
-    if(zones.includes('tapa') || zones.includes('tapa_sup') || zones.includes('cara_sup')) {
-      // Top parts — apply to meshes in upper half or with "top/lid/tapa" in name
-      if(isTopHalf || name.includes('top') || name.includes('lid') || name.includes('tapa') || name.includes('cap')) {
-        shouldTexture = true;
-      }
-      // If only 1 mesh, apply to it
-      if(meshes.length === 1) shouldTexture = true;
+  // Default: cover the whole model
+  let repeat = {x: 1, y: 1};
+  let offset = {x: 0, y: 0};
+  let rotation = 0;
+  
+  // Product-specific UV positioning
+  if(pid === 'cenicero_led') {
+    if(zones.includes('tapa')) {
+      repeat = {x: 3, y: 3};      // Zoom in 3x so image is smaller
+      offset = {x: -1.0, y: -1.0}; // Center on top area
     }
-    
-    if(zones.includes('bordes') || zones.includes('cuerpo')) {
-      // Body/sides — apply to meshes in lower half or all non-top meshes
-      if(!isTopHalf || name.includes('body') || name.includes('side') || name.includes('cuerpo')) {
-        shouldTexture = true;
-      }
-      if(meshes.length === 1) shouldTexture = true;
+    if(zones.includes('bordes')) {
+      repeat = {x: 1, y: 3};
+      offset = {x: 0, y: -0.3};
     }
-    
-    if(zones.includes('tapa_inf') || zones.includes('cara_inf')) {
-      if(!isTopHalf) shouldTexture = true;
+  }
+  else if(pid === 'mechero') {
+    repeat = {x: 2.5, y: 1.2};    // Tall narrow zone
+    offset = {x: -0.75, y: -0.1};
+  }
+  else if(pid === 'grinder') {
+    if(zones.includes('tapa_sup')) {
+      repeat = {x: 3, y: 3};
+      offset = {x: -1.0, y: -1.2};
     }
-    
-    // Apply or restore
-    if(shouldTexture) {
-      mesh.material = mesh.material.clone();
+    if(zones.includes('tapa_inf')) {
+      repeat = {x: 3, y: 3};
+      offset = {x: -1.0, y: 0.2};
+    }
+    if(zones.includes('bordes')) {
+      repeat = {x: 1, y: 3};
+      offset = {x: 0, y: -0.5};
+    }
+  }
+  else if(pid === 'posavasos') {
+    if(zones.includes('cara_sup')) {
+      repeat = {x: 2.5, y: 2.5};
+      offset = {x: -0.75, y: -0.75};
+    }
+    if(zones.includes('cara_inf')) {
+      repeat = {x: 2.5, y: 2.5};
+      offset = {x: -0.75, y: 0.5};
+    }
+  }
+  
+  // Configure texture UV mapping
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.repeat.set(repeat.x, repeat.y);
+  texture.offset.set(offset.x, offset.y);
+  texture.rotation = rotation;
+  texture.needsUpdate = true;
+  
+  // Apply to all meshes but blend with original material
+  meshes.forEach(mesh => {
+    const orig = originalMaterials.get(mesh.uuid);
+    if(orig) {
+      mesh.material = orig.clone();
       mesh.material.map = texture;
       mesh.material.needsUpdate = true;
     } else {
-      const orig = originalMaterials.get(mesh.uuid);
-      if(orig) { mesh.material = orig.clone(); mesh.material.needsUpdate = true; }
+      mesh.material = mesh.material.clone();
+      mesh.material.map = texture;
+      mesh.material.needsUpdate = true;
     }
   });
   
-  console.log(`✦ Texture applied to zones: ${zones.join(', ')} (${meshes.length} meshes evaluated)`);
+  console.log(`✦ Texture UV: repeat(${repeat.x},${repeat.y}) offset(${offset.x},${offset.y}) zones: ${zones.join(', ')}`);
 }
 
 // Called when design is generated
@@ -1027,27 +1061,93 @@ async function pollAtlasResult(predId) {
 }
 
 // ═══════════════════════════════════
-// SHOW RESULT — with 2D mockup
+// PRINT-READY IMAGE GENERATOR
 // ═══════════════════════════════════
-function showResult() {
+// Crops and resizes the design image to exact print dimensions
+// DPI 300 for print quality: 1mm = ~11.81 pixels at 300dpi
+const PRINT_DPI = 300;
+const MM_TO_PX = PRINT_DPI / 25.4; // 11.81 px per mm
+
+function generatePrintImage(sourceUrl, zone) {
+  return new Promise((resolve) => {
+    const print = zone.print;
+    if(!print) { resolve(sourceUrl); return; }
+    
+    const pw = Math.round(print.w_mm * MM_TO_PX); // pixels width
+    const ph = Math.round(print.h_mm * MM_TO_PX); // pixels height
+    
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = pw;
+      canvas.height = ph;
+      const ctx = canvas.getContext('2d');
+      
+      // If circular, clip to circle
+      if(print.shape === 'circle') {
+        ctx.beginPath();
+        ctx.arc(pw/2, ph/2, Math.min(pw,ph)/2, 0, Math.PI * 2);
+        ctx.clip();
+      }
+      
+      // Draw image centered and covering the entire canvas (cover mode)
+      const scale = Math.max(pw / img.width, ph / img.height);
+      const sw = img.width * scale;
+      const sh = img.height * scale;
+      ctx.drawImage(img, (pw - sw) / 2, (ph - sh) / 2, sw, sh);
+      
+      const printDataUrl = canvas.toDataURL('image/png');
+      
+      console.log(`✦ Print image generated: ${pw}x${ph}px (${print.w_mm}x${print.h_mm}mm @ ${PRINT_DPI}dpi, ${print.shape})`);
+      
+      // Store for order
+      S.printImage = printDataUrl;
+      S.printDimensions = {w_mm: print.w_mm, h_mm: print.h_mm, w_px: pw, h_px: ph, shape: print.shape, dpi: PRINT_DPI};
+      
+      resolve(printDataUrl);
+    };
+    img.onerror = () => resolve(sourceUrl);
+    img.src = sourceUrl;
+  });
+}
+
+// ═══════════════════════════════════
+// SHOW RESULT
+// ═══════════════════════════════════
+async function showResult() {
   const panel = document.getElementById('resultPanel');
   const styleName = STYLES.find(s=>s.id===S.style)?.label?.replace(/[^\w\sáéíóú]/g,'').trim() || S.style;
   const p = S.product;
   const zoneNames = S.selectedZones.map(zid => { const z = p.zones.find(z=>z.id===zid); return z ? z.name : zid; }).join(', ');
   
-  // Apply design to 3D model
-  applyDesignTo3D(S.result);
+  // Get the first selected zone's print config
+  const activeZone = p.zones.find(z => S.selectedZones.includes(z.id));
+  
+  // Generate print-ready image cropped to exact dimensions
+  let printImg = S.result;
+  if(activeZone && activeZone.print) {
+    printImg = await generatePrintImage(S.result, activeZone);
+  }
+  
+  // Apply print-ready image to 3D model
+  applyDesignTo3D(printImg);
+  
+  const dims = S.printDimensions;
+  const dimsText = dims ? `${dims.w_mm}×${dims.h_mm}mm (${dims.shape === 'circle' ? 'circular' : 'rectangular'}) @ ${dims.dpi}dpi` : p.printSize;
   
   panel.style.display = 'block';
   panel.innerHTML = `<div class="fadein">
     <div class="res-label">✦ Tu diseño personalizado</div>
     <div class="res-title">${p.name} · ${styleName}</div>
     
-    <!-- Design + Product side by side -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div>
-        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-family:var(--fd);font-weight:700">Tu diseño</div>
-        <div class="res-img"><div class="glow"></div><img src="${S.result}" style="position:relative;z-index:1;border-radius:var(--r)"></div>
+        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-family:var(--fd);font-weight:700">Diseño listo para imprimir</div>
+        <div style="border-radius:var(--r);overflow:hidden;background:var(--bg);display:flex;align-items:center;justify-content:center;aspect-ratio:1/1;position:relative">
+          <img src="${printImg}" style="max-width:90%;max-height:90%;object-fit:contain;${activeZone?.print?.shape==='circle'?'border-radius:50%;':''}">
+          <div style="position:absolute;bottom:6px;right:6px;background:#000a;padding:3px 8px;border-radius:4px;font-size:8px;color:var(--lime)">${dims ? dims.w_mm+'×'+dims.h_mm+'mm' : ''}</div>
+        </div>
       </div>
       <div>
         <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-family:var(--fd);font-weight:700">Producto real</div>
@@ -1057,12 +1157,10 @@ function showResult() {
       </div>
     </div>
     
-    <!-- Zone info -->
     <div style="text-align:center;padding:8px 12px;background:var(--bg3);border-radius:var(--rs);margin-bottom:12px;font-size:11px;color:var(--text2)">
-      Diseño se aplica en: <span style="color:var(--lime);font-weight:600">${zoneNames}</span> · Medidas: <span style="color:var(--lime)">${p.printSize || 'según producto'}</span>
+      Zona: <span style="color:var(--lime);font-weight:600">${zoneNames}</span> · Medidas: <span style="color:var(--lime)">${dimsText}</span>
     </div>
     
-    <!-- Product thumbnails -->
     <div style="display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding:4px 0">
       ${PRODUCTS.map(pr => `<img src="${pr.img}" style="height:48px;border-radius:6px;border:2px solid ${pr.id===p.id?'var(--lime)':'transparent'};opacity:${pr.id===p.id?'.9':'.5'};cursor:pointer" crossorigin="anonymous" onclick="selProduct('${pr.id}')" title="${pr.name}">`).join('')}
     </div>
@@ -1075,6 +1173,7 @@ function showResult() {
       <div class="srow"><span>Producto</span><span>${p.name}</span></div>
       <div class="srow"><span>Estilo</span><span>${styleName}</span></div>
       <div class="srow"><span>Zona</span><span>${zoneNames}</span></div>
+      <div class="srow"><span>Medida impresión</span><span>${dims ? dims.w_mm+'×'+dims.h_mm+'mm' : p.printSize}</span></div>
       <div class="srow"><span>QR en producto</span><span>Incluido ✓</span></div>
       <div class="srow"><span>Mensaje de voz</span><span>${S.audioBlob ? '✓ Grabado' : 'Sin mensaje'}</span></div>
       <div class="stotal"><span>Total</span><span>${getTotal()}€</span></div>
@@ -1108,6 +1207,8 @@ async function submitOrder() {
       product: S.product.name,
       style: S.style,
       design_url: S.result || null,
+      print_image: S.printImage || null,
+      print_dimensions: S.printDimensions || null,
       audio_url: audioFileUrl,
       extras: {
         qr_product: true,
