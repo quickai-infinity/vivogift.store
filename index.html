@@ -502,7 +502,7 @@ function selProduct(id) {
   document.getElementById('resultPanel').style.display = 'none';
   // Remove design overlay
   currentDesignTexture = null;
-  if(currentModel) applyTextureToModel(currentModel, null);
+  if(typeof removeDecal === 'function') removeDecal();
 }
 
 // ═══════════════════════════════════
@@ -630,6 +630,16 @@ function load3DModel(url) {
       threeScene.add(model);
       currentModel = model;
       
+      // Store world-space bounding box for decal positioning
+      const worldBox = new THREE.Box3().setFromObject(model);
+      modelBounds = {
+        min: worldBox.min.clone(),
+        max: worldBox.max.clone(),
+        size: worldBox.getSize(new THREE.Vector3()),
+        center: worldBox.getCenter(new THREE.Vector3())
+      };
+      console.log(`  Bounds: size(${modelBounds.size.x.toFixed(2)},${modelBounds.size.y.toFixed(2)},${modelBounds.size.z.toFixed(2)})`);
+      
       // If there's already a design, apply it
       if(currentDesignTexture) {
         applyTextureToModel(model, currentDesignTexture);
@@ -659,134 +669,112 @@ function load3DModel(url) {
   );
 }
 
-function applyTextureToModel(model, texture) {
-  if(!model) return;
-  
-  const meshes = [];
-  model.traverse((child) => { if(child.isMesh) meshes.push(child); });
-  
-  if(!texture) {
-    meshes.forEach(m => {
-      const orig = originalMaterials.get(m.uuid);
-      if(orig) { m.material = orig.clone(); m.material.needsUpdate = true; }
-    });
-    return;
-  }
-  
-  texture.wrapS = THREE.ClampToEdgeWrapping;
-  texture.wrapT = THREE.ClampToEdgeWrapping;
-  texture.needsUpdate = true;
-  
-  const zones = S.selectedZones;
-  
-  // Zone-to-mesh mapping: which mesh names should get the texture
-  // Mesh names from Blender: "tapa", "cuerpo", "bordes", "tapa_sup", "tapa_inf", etc.
-  const zoneToMesh = {
-    'tapa': ['tapa'],
-    'tapa_sup': ['tapa', 'tapa_sup'],
-    'tapa_inf': ['tapa_inf'],
-    'bordes': ['cuerpo', 'bordes', 'body'],
-    'cuerpo': ['cuerpo', 'body'],
-    'cara_sup': ['tapa', 'cara_sup', 'top'],
-    'cara_inf': ['tapa_inf', 'cara_inf', 'bottom']
-  };
-  
-  // Build list of mesh names that should receive texture
-  const targetNames = new Set();
-  zones.forEach(zone => {
-    const names = zoneToMesh[zone] || [zone];
-    names.forEach(n => targetNames.add(n.toLowerCase()));
-  });
-  
-  let applied = 0;
-  meshes.forEach(mesh => {
-    const meshName = (mesh.name || '').toLowerCase();
-    const orig = originalMaterials.get(mesh.uuid);
-    
-    // Check if this mesh matches any target zone
-    const isTarget = targetNames.has(meshName) || 
-      [...targetNames].some(t => meshName.includes(t));
-    
-    if(isTarget) {
-      mesh.material = orig ? orig.clone() : mesh.material.clone();
-      mesh.material.map = texture;
-      mesh.material.needsUpdate = true;
-      applied++;
-    } else {
-      // Restore original material
-      if(orig) { mesh.material = orig.clone(); mesh.material.needsUpdate = true; }
-    }
-  });
-  
-  // Fallback: if no mesh matched (single mesh models), apply to all
-  if(applied === 0 && meshes.length > 0) {
-    meshes.forEach(mesh => {
-      mesh.material = mesh.material.clone();
-      mesh.material.map = texture;
-      mesh.material.needsUpdate = true;
-    });
-    applied = meshes.length;
-    console.log(`✦ No mesh name match — applied to all ${applied} meshes (fallback)`);
-  } else {
-    console.log(`✦ Texture applied to ${applied}/${meshes.length} meshes (zones: ${zones.join(', ')})`);
+// ═══════════════════════════════════
+// 3D DECAL STICKER SYSTEM
+// ═══════════════════════════════════
+let currentDecal = null;
+let modelBounds = null; // stored after model loads
+
+// Decal zone config: position as % of bounding box, sizeFactor relative to model width
+const ZONE_CONFIG = {
+  // Circular products — sticker on top face
+  tapa:     {yPct:0.95, zPct:0, xPct:0, rotX:-Math.PI/2, sizePct:0.7},
+  tapa_sup: {yPct:0.95, zPct:0, xPct:0, rotX:-Math.PI/2, sizePct:0.8},
+  tapa_inf: {yPct:0.05, zPct:0, xPct:0, rotX:Math.PI/2,  sizePct:0.8},
+  cara_sup: {yPct:0.95, zPct:0, xPct:0, rotX:-Math.PI/2, sizePct:0.85},
+  cara_inf: {yPct:0.05, zPct:0, xPct:0, rotX:Math.PI/2,  sizePct:0.85},
+  // Front-facing — sticker on front face
+  cuerpo:   {yPct:0.5,  zPct:0.52, xPct:0, rotX:0, sizePct:0.4, scaleY:2.0},
+  bordes:   {yPct:0.4,  zPct:0.52, xPct:0, rotX:0, sizePct:0.6},
+};
+
+function removeDecal() {
+  if(currentDecal && currentDecal.parent) {
+    currentDecal.parent.remove(currentDecal);
+    if(currentDecal.geometry) currentDecal.geometry.dispose();
+    if(currentDecal.material) currentDecal.material.dispose();
+    currentDecal = null;
   }
 }
 
-// Called when design is generated
-async function applyDesignTo3D(imageUrl) {
-  if(!imageUrl || !currentModel) {
-    currentDesignTexture = null;
-    if(currentModel) applyTextureToModel(currentModel, null);
-    return;
+function applyTextureToModel(model, texture) {
+  removeDecal();
+  if(!model || !texture || !modelBounds) return;
+  
+  const zone = S.selectedZones[0];
+  const cfg = ZONE_CONFIG[zone];
+  if(!cfg) { console.log(`✦ No zone config for: ${zone}`); return; }
+  
+  const b = modelBounds; // {min, max, size, center} in WORLD space
+  
+  // Calculate position from percentages
+  const px = b.min.x + b.size.x * (cfg.xPct || 0.5);
+  const py = b.min.y + b.size.y * cfg.yPct;
+  const pz = b.min.z + b.size.z * (cfg.zPct || 0.5);
+  
+  // Size relative to model width
+  const stickerSize = Math.min(b.size.x, b.size.z) * cfg.sizePct;
+  
+  let geometry;
+  if(cfg.scaleY) {
+    geometry = new THREE.PlaneGeometry(stickerSize, stickerSize * cfg.scaleY);
+  } else {
+    geometry = new THREE.CircleGeometry(stickerSize / 2, 64);
   }
+  
+  const material = new THREE.MeshBasicMaterial({
+    map: texture,
+    transparent: true,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -4
+  });
+  
+  const decal = new THREE.Mesh(geometry, material);
+  // Position in world space, not model space
+  decal.position.set(px, py, pz);
+  decal.rotation.set(cfg.rotX || 0, 0, 0);
+  decal.name = 'design_decal';
+  
+  // Add to SCENE so it doesn't inherit model's scale
+  threeScene.add(decal);
+  currentDecal = decal;
+  
+  console.log(`✦ Sticker: zone=${zone} pos(${px.toFixed(2)},${py.toFixed(2)},${pz.toFixed(2)}) size=${stickerSize.toFixed(2)}`);
+}
+
+async function applyDesignTo3D(imageUrl) {
+  removeDecal();
+  if(!imageUrl || !currentModel) { currentDesignTexture = null; return; }
   
   try {
     let textureSrc = imageUrl;
-    
-    // If it's a remote URL (not base64), fetch as blob to avoid CORS
     if(imageUrl.startsWith('http')) {
-      console.log('Fetching design image as blob for 3D texture...');
       const response = await fetch(imageUrl);
       const blob = await response.blob();
       textureSrc = URL.createObjectURL(blob);
     }
     
-    // Create image element and load
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
       canvas.width = img.naturalWidth || img.width;
       canvas.height = img.naturalHeight || img.height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
+      canvas.getContext('2d').drawImage(img, 0, 0);
       
       const tex = new THREE.CanvasTexture(canvas);
       tex.encoding = THREE.sRGBEncoding;
-      tex.flipY = false;
       tex.needsUpdate = true;
       
       currentDesignTexture = tex;
       applyTextureToModel(currentModel, tex);
-      console.log('✦ Design texture applied to 3D model (' + canvas.width + 'x' + canvas.height + ')');
+      console.log('✦ Decal applied (' + canvas.width + 'x' + canvas.height + ')');
       
-      // Cleanup object URL
       if(textureSrc !== imageUrl) URL.revokeObjectURL(textureSrc);
     };
-    img.onerror = (e) => {
-      console.error('Failed to load design image for 3D:', e);
-      // Last resort: try direct TextureLoader
-      const loader = new THREE.TextureLoader();
-      loader.crossOrigin = 'anonymous';
-      loader.load(imageUrl, (tex) => {
-        tex.encoding = THREE.sRGBEncoding;
-        tex.flipY = false;
-        currentDesignTexture = tex;
-        applyTextureToModel(currentModel, tex);
-        console.log('✦ Design texture applied via direct loader fallback');
-      });
-    };
+    img.onerror = (e) => console.error('Design load error:', e);
     img.src = textureSrc;
-    
   } catch(err) {
     console.error('applyDesignTo3D error:', err);
   }
