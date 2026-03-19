@@ -400,6 +400,19 @@ const PRODUCTS = [
     promptCtx: 'circular design for a round coaster surface',
     printSize: 'Ø 8cm (cara)',
     mockup: {top:'15%',left:'15%',width:'55%',height:'55%',borderRadius:'50%',transform:'perspective(500px) rotateX(30deg)'}
+  },
+  {
+    id: 'cenicero_home',
+    name: 'Cenicero Home',
+    price: 25,
+    img: SUPABASE_STORAGE + '/3-home-ceni.png',
+    glb: SUPABASE_STORAGE + '/cenicero-home.glb',
+    zones: [
+      {id:'tapa',name:'Tapa',icon:'⬆',default:true, print:{w_mm:92,h_mm:92,shape:'circle'}}
+    ],
+    promptCtx: 'circular design for the wooden lid of a home ashtray',
+    printSize: 'Ø 92mm (tapa)',
+    mockup: {top:'10%',left:'10%',width:'60%',height:'40%',borderRadius:'50%',transform:'perspective(500px) rotateX(35deg)'}
   }
 ];
 
@@ -630,15 +643,15 @@ function load3DModel(url) {
       threeScene.add(model);
       currentModel = model;
       
-      // Store world-space bounding box for decal positioning
-      const worldBox = new THREE.Box3().setFromObject(model);
+      // Store bounding box for decal positioning (LOCAL space - before transforms)
+      const localBox = new THREE.Box3().setFromObject(model);
       modelBounds = {
-        min: worldBox.min.clone(),
-        max: worldBox.max.clone(),
-        size: worldBox.getSize(new THREE.Vector3()),
-        center: worldBox.getCenter(new THREE.Vector3())
+        localMin: localBox.min.clone(),
+        localMax: localBox.max.clone(),
+        localSize: localBox.getSize(new THREE.Vector3()),
+        localCenter: localBox.getCenter(new THREE.Vector3())
       };
-      console.log(`  Bounds: size(${modelBounds.size.x.toFixed(2)},${modelBounds.size.y.toFixed(2)},${modelBounds.size.z.toFixed(2)})`);
+      console.log(`  Bounds: size(${modelBounds.localSize.x.toFixed(2)},${modelBounds.localSize.y.toFixed(2)},${modelBounds.localSize.z.toFixed(2)})`);
       
       // If there's already a design, apply it
       if(currentDesignTexture) {
@@ -673,19 +686,16 @@ function load3DModel(url) {
 // 3D DECAL STICKER SYSTEM
 // ═══════════════════════════════════
 let currentDecal = null;
-let modelBounds = null; // stored after model loads
+let modelBounds = null;
 
-// Decal zone config: position as % of bounding box, sizeFactor relative to model width
 const ZONE_CONFIG = {
-  // Circular products — sticker on top face
-  tapa:     {yPct:0.95, zPct:0, xPct:0, rotX:-Math.PI/2, sizePct:0.7},
-  tapa_sup: {yPct:0.95, zPct:0, xPct:0, rotX:-Math.PI/2, sizePct:0.8},
-  tapa_inf: {yPct:0.05, zPct:0, xPct:0, rotX:Math.PI/2,  sizePct:0.8},
-  cara_sup: {yPct:0.95, zPct:0, xPct:0, rotX:-Math.PI/2, sizePct:0.85},
-  cara_inf: {yPct:0.05, zPct:0, xPct:0, rotX:Math.PI/2,  sizePct:0.85},
-  // Front-facing — sticker on front face
-  cuerpo:   {yPct:0.5,  zPct:0.52, xPct:0, rotX:0, sizePct:0.4, scaleY:2.0},
-  bordes:   {yPct:0.4,  zPct:0.52, xPct:0, rotX:0, sizePct:0.6},
+  tapa:     {yPct:0.92, zPct:0.35, rotX:-0.6, sizePct:0.45},
+  tapa_sup: {yPct:0.95, zPct:0.5, rotX:-Math.PI/2, sizePct:0.7},
+  tapa_inf: {yPct:0.05, zPct:0.5, rotX:Math.PI/2,  sizePct:0.7},
+  cara_sup: {yPct:0.95, zPct:0.5, rotX:-Math.PI/2, sizePct:0.8},
+  cara_inf: {yPct:0.05, zPct:0.5, rotX:Math.PI/2,  sizePct:0.8},
+  cuerpo:   {yPct:0.5,  zPct:0.52, rotX:0, sizePct:0.35, scaleY:2.5},
+  bordes:   {yPct:0.4,  zPct:0.52, rotX:0, sizePct:0.5},
 };
 
 function removeDecal() {
@@ -703,17 +713,16 @@ function applyTextureToModel(model, texture) {
   
   const zone = S.selectedZones[0];
   const cfg = ZONE_CONFIG[zone];
-  if(!cfg) { console.log(`✦ No zone config for: ${zone}`); return; }
+  if(!cfg) { console.log(`✦ No zone config: ${zone}`); return; }
   
-  const b = modelBounds; // {min, max, size, center} in WORLD space
+  const b = modelBounds;
   
-  // Calculate position from percentages
-  const px = b.min.x + b.size.x * (cfg.xPct || 0.5);
-  const py = b.min.y + b.size.y * cfg.yPct;
-  const pz = b.min.z + b.size.z * (cfg.zPct || 0.5);
+  // Position in LOCAL model space (before model transforms)
+  const lx = 0; // center X
+  const ly = b.localMin.y + b.localSize.y * cfg.yPct;
+  const lz = b.localMin.z + b.localSize.z * cfg.zPct;
   
-  // Size relative to model width
-  const stickerSize = Math.min(b.size.x, b.size.z) * cfg.sizePct;
+  const stickerSize = Math.min(b.localSize.x, b.localSize.z) * cfg.sizePct;
   
   let geometry;
   if(cfg.scaleY) {
@@ -732,16 +741,15 @@ function applyTextureToModel(model, texture) {
   });
   
   const decal = new THREE.Mesh(geometry, material);
-  // Position in world space, not model space
-  decal.position.set(px, py, pz);
+  decal.position.set(lx, ly, lz);
   decal.rotation.set(cfg.rotX || 0, 0, 0);
   decal.name = 'design_decal';
   
-  // Add to SCENE so it doesn't inherit model's scale
-  threeScene.add(decal);
+  // Add to MODEL so it rotates together
+  model.add(decal);
   currentDecal = decal;
   
-  console.log(`✦ Sticker: zone=${zone} pos(${px.toFixed(2)},${py.toFixed(2)},${pz.toFixed(2)}) size=${stickerSize.toFixed(2)}`);
+  console.log(`✦ Sticker: ${zone} local(${lx.toFixed(2)},${ly.toFixed(2)},${lz.toFixed(2)}) size=${stickerSize.toFixed(2)}`);
 }
 
 async function applyDesignTo3D(imageUrl) {
@@ -769,7 +777,6 @@ async function applyDesignTo3D(imageUrl) {
       
       currentDesignTexture = tex;
       applyTextureToModel(currentModel, tex);
-      console.log('✦ Decal applied (' + canvas.width + 'x' + canvas.height + ')');
       
       if(textureSrc !== imageUrl) URL.revokeObjectURL(textureSrc);
     };
