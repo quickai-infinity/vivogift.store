@@ -515,7 +515,7 @@ function selProduct(id) {
   document.getElementById('resultPanel').style.display = 'none';
   // Remove design overlay
   currentDesignTexture = null;
-  if(typeof removeDecal === 'function') removeDecal();
+  if(currentModel) applyTextureToModel(currentModel, null);
 }
 
 // ═══════════════════════════════════
@@ -593,6 +593,25 @@ function initThreeJS() {
   }
   animate();
   
+  // DEBUG: Arrow keys to adjust sticker position
+  // Up/Down = Y, Left/Right = Z, +/- = size, R/F = rotation X
+  document.addEventListener('keydown', (e) => {
+    if(!currentDecal) return;
+    const step = 0.05;
+    if(e.key === 'ArrowUp') currentDecal.position.y += step;
+    if(e.key === 'ArrowDown') currentDecal.position.y -= step;
+    if(e.key === 'ArrowLeft') currentDecal.position.z -= step;
+    if(e.key === 'ArrowRight') currentDecal.position.z += step;
+    if(e.key === '+' || e.key === '=') currentDecal.scale.multiplyScalar(1.1);
+    if(e.key === '-') currentDecal.scale.multiplyScalar(0.9);
+    if(e.key === 'r') currentDecal.rotation.x += 0.05;
+    if(e.key === 'f') currentDecal.rotation.x -= 0.05;
+    if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','+','=','-','r','f'].includes(e.key)) {
+      console.log(`📌 Sticker pos(${currentDecal.position.x.toFixed(3)},${currentDecal.position.y.toFixed(3)},${currentDecal.position.z.toFixed(3)}) rot(${currentDecal.rotation.x.toFixed(3)}) scale(${currentDecal.scale.x.toFixed(3)})`);
+      e.preventDefault();
+    }
+  });
+  
   // Load first product
   load3DModel(S.product.glb);
 }
@@ -643,15 +662,10 @@ function load3DModel(url) {
       threeScene.add(model);
       currentModel = model;
       
-      // Store bounding box for decal positioning (LOCAL space - before transforms)
+      // Store bounding box info
       const localBox = new THREE.Box3().setFromObject(model);
-      modelBounds = {
-        localMin: localBox.min.clone(),
-        localMax: localBox.max.clone(),
-        localSize: localBox.getSize(new THREE.Vector3()),
-        localCenter: localBox.getCenter(new THREE.Vector3())
-      };
-      console.log(`  Bounds: size(${modelBounds.localSize.x.toFixed(2)},${modelBounds.localSize.y.toFixed(2)},${modelBounds.localSize.z.toFixed(2)})`);
+      const bSize = localBox.getSize(new THREE.Vector3());
+      console.log(`  Model size: ${bSize.x.toFixed(2)} x ${bSize.y.toFixed(2)} x ${bSize.z.toFixed(2)}`);
       
       // If there's already a design, apply it
       if(currentDesignTexture) {
@@ -682,80 +696,38 @@ function load3DModel(url) {
   );
 }
 
-// ═══════════════════════════════════
-// 3D DECAL STICKER SYSTEM
-// ═══════════════════════════════════
-let currentDecal = null;
-let modelBounds = null;
-
-const ZONE_CONFIG = {
-  tapa:     {yPct:0.92, zPct:0.35, rotX:-0.6, sizePct:0.45},
-  tapa_sup: {yPct:0.95, zPct:0.5, rotX:-Math.PI/2, sizePct:0.7},
-  tapa_inf: {yPct:0.05, zPct:0.5, rotX:Math.PI/2,  sizePct:0.7},
-  cara_sup: {yPct:0.95, zPct:0.5, rotX:-Math.PI/2, sizePct:0.8},
-  cara_inf: {yPct:0.05, zPct:0.5, rotX:Math.PI/2,  sizePct:0.8},
-  cuerpo:   {yPct:0.5,  zPct:0.52, rotX:0, sizePct:0.35, scaleY:2.5},
-  bordes:   {yPct:0.4,  zPct:0.52, rotX:0, sizePct:0.5},
-};
-
-function removeDecal() {
-  if(currentDecal && currentDecal.parent) {
-    currentDecal.parent.remove(currentDecal);
-    if(currentDecal.geometry) currentDecal.geometry.dispose();
-    if(currentDecal.material) currentDecal.material.dispose();
-    currentDecal = null;
-  }
-}
-
 function applyTextureToModel(model, texture) {
-  removeDecal();
-  if(!model || !texture || !modelBounds) return;
+  if(!model) return;
+  const meshes = [];
+  model.traverse((child) => { if(child.isMesh) meshes.push(child); });
   
-  const zone = S.selectedZones[0];
-  const cfg = ZONE_CONFIG[zone];
-  if(!cfg) { console.log(`✦ No zone config: ${zone}`); return; }
-  
-  const b = modelBounds;
-  
-  // Position in LOCAL model space (before model transforms)
-  const lx = 0; // center X
-  const ly = b.localMin.y + b.localSize.y * cfg.yPct;
-  const lz = b.localMin.z + b.localSize.z * cfg.zPct;
-  
-  const stickerSize = Math.min(b.localSize.x, b.localSize.z) * cfg.sizePct;
-  
-  let geometry;
-  if(cfg.scaleY) {
-    geometry = new THREE.PlaneGeometry(stickerSize, stickerSize * cfg.scaleY);
-  } else {
-    geometry = new THREE.CircleGeometry(stickerSize / 2, 64);
+  if(!texture) {
+    meshes.forEach(m => {
+      const orig = originalMaterials.get(m.uuid);
+      if(orig) { m.material = orig.clone(); m.material.needsUpdate = true; }
+    });
+    return;
   }
   
-  const material = new THREE.MeshBasicMaterial({
-    map: texture,
-    transparent: true,
-    side: THREE.DoubleSide,
-    depthWrite: false,
-    polygonOffset: true,
-    polygonOffsetFactor: -4
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.needsUpdate = true;
+  
+  meshes.forEach(mesh => {
+    const orig = originalMaterials.get(mesh.uuid);
+    mesh.material = orig ? orig.clone() : mesh.material.clone();
+    mesh.material.map = texture;
+    mesh.material.needsUpdate = true;
   });
-  
-  const decal = new THREE.Mesh(geometry, material);
-  decal.position.set(lx, ly, lz);
-  decal.rotation.set(cfg.rotX || 0, 0, 0);
-  decal.name = 'design_decal';
-  
-  // Add to MODEL so it rotates together
-  model.add(decal);
-  currentDecal = decal;
-  
-  console.log(`✦ Sticker: ${zone} local(${lx.toFixed(2)},${ly.toFixed(2)},${lz.toFixed(2)}) size=${stickerSize.toFixed(2)}`);
+  console.log(`✦ Texture applied to ${meshes.length} meshes`);
 }
 
 async function applyDesignTo3D(imageUrl) {
-  removeDecal();
-  if(!imageUrl || !currentModel) { currentDesignTexture = null; return; }
-  
+  if(!imageUrl || !currentModel) {
+    currentDesignTexture = null;
+    if(currentModel) applyTextureToModel(currentModel, null);
+    return;
+  }
   try {
     let textureSrc = imageUrl;
     if(imageUrl.startsWith('http')) {
@@ -763,21 +735,19 @@ async function applyDesignTo3D(imageUrl) {
       const blob = await response.blob();
       textureSrc = URL.createObjectURL(blob);
     }
-    
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
       canvas.width = img.naturalWidth || img.width;
       canvas.height = img.naturalHeight || img.height;
       canvas.getContext('2d').drawImage(img, 0, 0);
-      
       const tex = new THREE.CanvasTexture(canvas);
       tex.encoding = THREE.sRGBEncoding;
+      tex.flipY = false;
       tex.needsUpdate = true;
-      
       currentDesignTexture = tex;
       applyTextureToModel(currentModel, tex);
-      
+      console.log('✦ Design applied (' + canvas.width + 'x' + canvas.height + ')');
       if(textureSrc !== imageUrl) URL.revokeObjectURL(textureSrc);
     };
     img.onerror = (e) => console.error('Design load error:', e);
@@ -880,41 +850,75 @@ async function generate() {
   btn.classList.add('loading'); btn.disabled = true;
 
   try {
-    let imageUrl;
-
+    let designImage; // The client's design (photo or AI-generated)
+    
     if(S.flow === 'photo' && S.photo) {
       if(S.style === 'original') {
-        // Original — use the photo as-is, no API call
-        imageUrl = S.photo;
+        designImage = S.photo; // Use photo as-is
       } else {
-        // IMAGE-TO-IMAGE: Nano Banana Pro Edit — transform to style
-        imageUrl = await atlasI2I(S.photo, STYLE_PROMPTS[S.style]);
+        // Step 1: Transform photo to style first
+        toast('Transformando tu foto...','ok');
+        designImage = await atlasStyleTransform(S.photo, STYLE_PROMPTS[S.style]);
       }
     } else {
-      // TEXT-TO-IMAGE: Nano Banana T2I
-      imageUrl = await atlasT2I(S.prompt, STYLE_PROMPTS[S.style] || 'high quality digital art');
+      // Step 1: Generate design from text
+      toast('Generando diseño...','ok');
+      designImage = await atlasT2I(S.prompt, STYLE_PROMPTS[S.style] || 'high quality digital art');
     }
-
-    S.result = imageUrl;
+    
+    // Store the raw design for print
+    S.designRaw = designImage;
+    
+    // Step 2: Create mockup — insert design into product photo
+    toast('Creando mockup del producto...','ok');
+    const mockupUrl = await atlasCreateMockup(designImage);
+    
+    S.result = mockupUrl;
+    S.designForPrint = designImage; // Keep raw design for print file
     showResult();
   } catch(err) {
     console.error('Generation error:', err);
-    toast('Error: ' + (err.message || 'Revisa tu clave Atlas Cloud'), 'err');
+    toast('Error: ' + (err.message || 'Intenta de nuevo'), 'err');
   } finally {
     btn.classList.remove('loading'); btn.disabled = false;
   }
 }
 
-// Atlas Cloud — Text to Image
-async function atlasT2I(prompt, stylePrompt) {
-  const fullPrompt = `${stylePrompt} artwork. ${prompt}. This design will be printed on a product (${S.product.promptCtx}). Fill the entire image, no borders or frames. Dark/black background. Vibrant colors, high detail, print-ready. Standalone artwork, NOT a product mockup.`;
+// ═══════════════════════════════════
+// ATLAS CLOUD API FUNCTIONS
+// ═══════════════════════════════════
+
+// Step 1a: Transform client photo to art style (I2I)
+async function atlasStyleTransform(photoBase64, stylePrompt) {
+  const pureBase64 = photoBase64.split(',')[1] || photoBase64;
+  const mimeType = photoBase64.match(/data:([^;]+)/)?.[1] || 'image/jpeg';
+  const dataUri = `data:${mimeType};base64,${pureBase64}`;
 
   const res = await fetch('https://api.atlascloud.ai/api/v1/model/generateImage', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${S.atlasKey}`
-    },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${S.atlasKey}` },
+    body: JSON.stringify({
+      model: 'google/nano-banana-pro/edit',
+      prompt: `Transform this image into ${stylePrompt}. Keep the subject clearly recognizable. Vibrant colors, high detail. Art only, no text, no borders.`,
+      images: [dataUri],
+      output_format: 'png',
+      enable_sync_mode: false
+    })
+  });
+  if(!res.ok) throw new Error(`Style transform failed (${res.status})`);
+  return await extractOrPoll(await res.json());
+}
+
+// Step 1b: Generate design from text description (T2I)
+async function atlasT2I(prompt, stylePrompt) {
+  const activeZone = S.product.zones.find(z => S.selectedZones.includes(z.id));
+  const shape = activeZone?.print?.shape === 'circle' ? 'circular' : 'rectangular';
+  
+  const fullPrompt = `${stylePrompt} artwork. ${prompt}. ${shape} design, fill entire frame, no borders. Dark background, vibrant colors, high detail, print-ready.`;
+
+  const res = await fetch('https://api.atlascloud.ai/api/v1/model/generateImage', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${S.atlasKey}` },
     body: JSON.stringify({
       model: 'google/nano-banana-2/text-to-image',
       prompt: fullPrompt,
@@ -923,46 +927,80 @@ async function atlasT2I(prompt, stylePrompt) {
       enable_sync_mode: false
     })
   });
-
-  if(!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || err.error || `Atlas T2I failed (${res.status})`);
-  }
-
-  const data = await res.json();
-  console.log('Atlas T2I response:', JSON.stringify(data).slice(0, 800));
-  return await extractOrPoll(data);
+  if(!res.ok) throw new Error(`T2I failed (${res.status})`);
+  return await extractOrPoll(await res.json());
 }
 
-// Atlas Cloud — Image to Image (transform photo)
-async function atlasI2I(photoBase64, stylePrompt) {
-  const pureBase64 = photoBase64.split(',')[1] || photoBase64;
-  const mimeType = photoBase64.match(/data:([^;]+)/)?.[1] || 'image/jpeg';
-  const dataUri = `data:${mimeType};base64,${pureBase64}`;
+// Step 2: Create product mockup — send product photo + design to Nano Banana 2 Edit
+async function atlasCreateMockup(designImageUrl) {
+  const p = S.product;
+  const zone = S.selectedZones[0];
+  const zoneName = p.zones.find(z => z.id === zone)?.name || zone;
+  const productImgUrl = p.img; // Product photo from Supabase
+  const productName = p.name;
+  
+  // Fetch product image as base64
+  const productB64 = await imageUrlToDataUri(productImgUrl);
+  
+  // Fetch design image as base64 (if it's a URL)
+  let designB64 = designImageUrl;
+  if(designImageUrl.startsWith('http')) {
+    designB64 = await imageUrlToDataUri(designImageUrl);
+  }
+  
+  // Build prompt matching what worked in Atlas Cloud playground
+  const zoneInstructions = {
+    'tapa': `en la tapa del producto, solo en la tapa, respetando los margenes`,
+    'tapa_sup': `en la tapa superior del producto, solo en la tapa superior`,
+    'tapa_inf': `en la tapa inferior del producto, solo en la tapa inferior`,
+    'cuerpo': `alrededor del cuerpo del producto, envolviendo el cuerpo`,
+    'bordes': `en los bordes del producto`,
+    'cara_sup': `en la cara superior del producto`,
+    'cara_inf': `en la cara inferior del producto`
+  };
+  
+  const zoneText = zoneInstructions[zone] || `en ${zoneName} del producto`;
+  
+  const prompt = `Desarrollame un mockup con la imagen del producto que te comparto. Inserta la segunda imagen ${zoneText}. Devuelve la imagen del producto terminado con el diseño insertado ${zoneText}. Fondo negro de estudio fotografico para publicidad. Atencion: solo insertar ${zoneText}, no en otras partes.`;
 
   const res = await fetch('https://api.atlascloud.ai/api/v1/model/generateImage', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${S.atlasKey}`
-    },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${S.atlasKey}` },
     body: JSON.stringify({
-      model: 'google/nano-banana-pro/edit',
-      prompt: `Transform this image into ${stylePrompt}. Make it a stunning artwork suitable for printing on a product. Dark background, vibrant colors, high detail, print-ready quality. Keep the subject recognizable but fully transformed into the art style.`,
-      images: [dataUri],
+      model: 'google/nano-banana-2/edit',
+      prompt: prompt,
+      images: [productB64, designB64],
+      aspect_ratio: '16:9',
       output_format: 'png',
       enable_sync_mode: false
     })
   });
-
+  
   if(!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || err.error || `Atlas I2I failed (${res.status})`);
+    throw new Error(err.message || `Mockup failed (${res.status})`);
   }
-
+  
   const data = await res.json();
-  console.log('Atlas I2I response:', JSON.stringify(data).slice(0, 800));
+  console.log('Atlas Mockup response:', JSON.stringify(data).slice(0, 500));
   return await extractOrPoll(data);
+}
+
+// Helper: convert image URL to data URI
+async function imageUrlToDataUri(url) {
+  if(url.startsWith('data:')) return url;
+  const response = await fetch(url);
+  const blob = await response.blob();
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.readAsDataURL(blob);
+  });
+}
+
+// Atlas Cloud — Image to Image (legacy, kept for compatibility)
+async function atlasI2I(photoBase64, stylePrompt) {
+  return await atlasStyleTransform(photoBase64, stylePrompt);
 }
 
 // Extract image from response, or poll if async
@@ -1113,45 +1151,49 @@ async function showResult() {
   const styleName = STYLES.find(s=>s.id===S.style)?.label?.replace(/[^\w\sáéíóú]/g,'').trim() || S.style;
   const p = S.product;
   const zoneNames = S.selectedZones.map(zid => { const z = p.zones.find(z=>z.id===zid); return z ? z.name : zid; }).join(', ');
-  
   const activeZone = p.zones.find(z => S.selectedZones.includes(z.id));
   
-  let printImg = S.result;
+  // Generate print-ready image from raw design (not mockup)
+  const rawDesign = S.designForPrint || S.result;
+  let printImg = rawDesign;
   if(activeZone && activeZone.print) {
-    printImg = await generatePrintImage(S.result, activeZone);
+    printImg = await generatePrintImage(rawDesign, activeZone);
   }
   
-  applyDesignTo3D(printImg);
+  // The mockup IS the result from Atlas Cloud (product + design combined)
+  const mockupImg = S.result;
+  
+  // Apply raw design to 3D viewer
+  applyDesignTo3D(rawDesign);
   
   const dims = S.printDimensions;
-  const dimsText = dims ? `${dims.w_mm}×${dims.h_mm}mm (${dims.shape === 'circle' ? 'circular' : 'rectangular'}) @ ${dims.dpi}dpi` : p.printSize;
-  
-  // Build mockup overlay HTML
-  const m = p.mockup;
+  const dimsText = dims ? `${dims.w_mm}×${dims.h_mm}mm` : p.printSize;
   const isCircle = activeZone?.print?.shape === 'circle';
-  const mockupHtml = (printImg && m) ? `
-    <div style="position:absolute;top:${m.top};left:${m.left};width:${m.width};height:${m.height};transform:${m.transform||'none'};border-radius:${isCircle?'50%':(m.borderRadius||'4px')};overflow:hidden;pointer-events:none;z-index:2;opacity:0.92;box-shadow:inset 0 0 8px rgba(0,0,0,0.5)">
-      <img src="${printImg}" style="width:100%;height:100%;object-fit:cover;display:block">
-    </div>` : '';
   
   panel.style.display = 'block';
   panel.innerHTML = `<div class="fadein">
     <div class="res-label">✦ Tu diseño personalizado</div>
     <div class="res-title">${p.name} · ${styleName}</div>
     
+    <!-- Mockup result - the main visual -->
+    <div style="margin-bottom:16px;border-radius:var(--r);overflow:hidden;position:relative">
+      <img src="${mockupImg}" style="width:100%;display:block;border-radius:var(--r)" crossorigin="anonymous">
+      <div style="position:absolute;bottom:8px;left:8px;background:#000a;padding:4px 10px;border-radius:6px;font-size:10px;color:var(--lime)">Mockup · ${zoneNames}</div>
+    </div>
+    
+    <!-- Print-ready design + product photo side by side -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div>
-        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-family:var(--fd);font-weight:700">Diseño listo para imprimir</div>
+        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-family:var(--fd);font-weight:700">Diseño para imprimir</div>
         <div style="border-radius:var(--r);overflow:hidden;background:var(--bg);display:flex;align-items:center;justify-content:center;aspect-ratio:1/1;position:relative">
           <img src="${printImg}" style="max-width:90%;max-height:90%;object-fit:contain;${isCircle?'border-radius:50%;':''}">
-          <div style="position:absolute;bottom:6px;right:6px;background:#000a;padding:3px 8px;border-radius:4px;font-size:8px;color:var(--lime)">${dims ? dims.w_mm+'×'+dims.h_mm+'mm' : ''}</div>
+          <div style="position:absolute;bottom:6px;right:6px;background:#000a;padding:3px 8px;border-radius:4px;font-size:8px;color:var(--lime)">${dimsText}</div>
         </div>
       </div>
       <div>
-        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-family:var(--fd);font-weight:700">Mockup producto</div>
-        <div style="border-radius:var(--r);overflow:hidden;background:var(--bg);aspect-ratio:1/1;position:relative">
-          <img src="${p.img}" style="width:100%;height:100%;object-fit:contain;position:relative;z-index:1" crossorigin="anonymous">
-          ${mockupHtml}
+        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-family:var(--fd);font-weight:700">Producto</div>
+        <div style="border-radius:var(--r);overflow:hidden;background:var(--bg);aspect-ratio:1/1;display:flex;align-items:center;justify-content:center">
+          <img src="${p.img}" style="max-width:100%;max-height:100%;object-fit:contain" crossorigin="anonymous">
         </div>
       </div>
     </div>
@@ -1172,7 +1214,7 @@ async function showResult() {
       <div class="srow"><span>Producto</span><span>${p.name}</span></div>
       <div class="srow"><span>Estilo</span><span>${styleName}</span></div>
       <div class="srow"><span>Zona</span><span>${zoneNames}</span></div>
-      <div class="srow"><span>Medida impresión</span><span>${dims ? dims.w_mm+'×'+dims.h_mm+'mm' : p.printSize}</span></div>
+      <div class="srow"><span>Medida impresión</span><span>${dimsText}</span></div>
       <div class="srow"><span>QR en producto</span><span>Incluido ✓</span></div>
       <div class="srow"><span>Mensaje de voz</span><span>${S.audioBlob ? '✓ Grabado' : 'Sin mensaje'}</span></div>
       <div class="stotal"><span>Total</span><span>${getTotal()}€</span></div>
