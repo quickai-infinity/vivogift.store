@@ -1,0 +1,2082 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VIVOgift — Configurador de Regalos</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#080808;--bg2:#0e0e0e;--bg3:#161616;--bg4:#1e1e1e;--bg5:#262626;
+  --lime:#e8ff47;--lime10:#e8ff4718;--lime20:#e8ff4730;
+  --text:#f0ede8;--text2:#a09e99;--text3:#5a5a5a;
+  --r:14px;--rs:8px;
+  --fd:'Syne',sans-serif;--fb:'DM Sans',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100vh;overflow-x:hidden}
+button{font-family:var(--fb);cursor:pointer}
+
+/* NAV */
+.nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 24px;display:flex;justify-content:space-between;align-items:center;backdrop-filter:blur(24px);background:rgba(8,8,8,.75);border-bottom:1px solid #ffffff06}
+.logo{display:flex;align-items:center;font-family:var(--fd);font-size:21px;font-weight:800;letter-spacing:-.5px;text-decoration:none;color:var(--text)}
+.logo-o{width:24px;height:24px;border:2px solid var(--lime);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin:0 1px}
+.logo-o svg{width:9px;height:9px;fill:var(--lime)}
+.logo-gift{color:var(--lime);font-weight:300;font-size:19px}
+
+/* LAYOUT */
+.app{display:grid;grid-template-columns:300px 1fr;min-height:100vh;padding-top:56px}
+@media(max-width:860px){.app{grid-template-columns:1fr}}
+
+/* SIDEBAR */
+.sidebar{background:var(--bg);border-right:1px solid #ffffff06;overflow-y:auto;padding:20px 18px 30px;display:flex;flex-direction:column;gap:22px}
+.sidebar::-webkit-scrollbar{width:3px}.sidebar::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
+.step-label{font-family:var(--fd);font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--lime);margin-bottom:8px;display:flex;align-items:center;gap:7px}
+.step-label::before{content:'';width:6px;height:2px;background:var(--lime);border-radius:1px}
+.step-title{font-family:var(--fd);font-size:14px;font-weight:700;margin-bottom:12px}
+
+/* Flow tabs */
+.flow-tabs{display:flex;gap:4px;background:var(--bg3);border-radius:var(--rs);padding:3px}
+.flow-tab{flex:1;padding:9px 6px;text-align:center;font-size:11px;font-weight:600;border-radius:6px;transition:.2s;color:var(--text3);border:none;background:transparent}
+.flow-tab.on{background:var(--bg5);color:var(--lime)}
+.flow-panel{display:none}.flow-panel.on{display:block}
+
+/* Upload */
+.upload-zone{border:2px dashed #ffffff15;border-radius:var(--r);padding:18px 12px;text-align:center;transition:.3s;position:relative;cursor:pointer}
+.upload-zone:hover{border-color:var(--lime20)}
+.upload-zone.has{border-color:var(--lime);border-style:solid;background:var(--lime10)}
+.up-preview{width:100%;max-height:100px;object-fit:contain;border-radius:6px;margin-top:6px}
+.up-clear{position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:50%;background:#000a;border:1px solid #ffffff15;color:var(--text);font-size:11px;display:flex;align-items:center;justify-content:center;z-index:2}
+.up-clear:hover{background:var(--lime);color:var(--bg)}
+
+/* Style pills */
+.spills{display:flex;flex-wrap:wrap;gap:5px}
+.sp{padding:5px 11px;border-radius:18px;border:1.5px solid #ffffff12;background:transparent;color:var(--text3);font-size:10px;transition:.2s}
+.sp:hover{border-color:var(--lime20);color:var(--text2)}
+.sp.on{border-color:var(--lime);background:var(--lime10);color:var(--lime);font-weight:600}
+
+/* Product cards */
+.pcard{background:var(--bg3);border:2px solid transparent;border-radius:var(--rs);padding:6px;cursor:pointer;transition:.2s;text-align:center;position:relative}
+.pcard:hover{border-color:var(--lime20);transform:translateY(-1px)}
+.pcard.on{border-color:var(--lime);background:var(--bg4)}
+.pcard img{width:100%;height:60px;object-fit:contain;border-radius:5px;margin-bottom:3px}
+.pcard .pn{font-size:10px;font-weight:600;line-height:1.2}
+.pcard .pp{font-size:9px;color:var(--lime);margin-top:1px}
+.pcard .pbadge{position:absolute;top:3px;right:3px;background:var(--lime);color:var(--bg);font-size:7px;font-weight:700;padding:1px 4px;border-radius:3px}
+
+/* Zones */
+.zones{display:flex;flex-wrap:wrap;gap:5px}
+.zb{padding:7px 12px;border-radius:var(--rs);border:1.5px solid #ffffff12;background:transparent;color:var(--text2);font-size:10px;transition:.2s;display:flex;align-items:center;gap:5px}
+.zb:hover{border-color:var(--lime20)}
+.zb.on{border-color:var(--lime);background:var(--lime10);color:var(--lime);font-weight:600}
+
+/* Prompt */
+.prompt-box{width:100%;min-height:70px;background:var(--bg3);border:1.5px solid #ffffff10;border-radius:var(--rs);padding:10px;font-family:var(--fb);font-size:12px;color:var(--text);resize:vertical;outline:none;transition:.2s}
+.prompt-box:focus{border-color:var(--lime)}
+.prompt-box::placeholder{color:var(--text3)}
+.phint{font-size:9px;color:var(--text3);margin-top:4px}
+
+/* Extras */
+.ext{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #ffffff06}.ext:last-child{border:none}
+.ext-n{font-size:11px;font-weight:500}.ext-d{font-size:9px;color:var(--text3)}
+.ext-p{font-size:10px;color:var(--lime);font-weight:600}
+.tog{width:36px;height:20px;background:var(--bg4);border-radius:10px;position:relative;transition:.2s;border:1.5px solid #ffffff12;flex-shrink:0}
+.tog.on{background:var(--lime);border-color:var(--lime)}
+.tog::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:var(--text);top:2px;left:2px;transition:.2s}
+.tog.on::after{transform:translateX(16px);background:var(--bg)}
+
+/* Generate */
+.btn-go{width:100%;padding:13px;background:var(--lime);color:var(--bg);font-family:var(--fd);font-size:13px;font-weight:700;border:none;border-radius:var(--rs);transition:.2s;letter-spacing:.5px;text-transform:uppercase}
+.btn-go:hover{box-shadow:0 8px 28px #e8ff4728;transform:translateY(-1px)}
+.btn-go:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-go.loading .bt{display:none}
+.btn-go .spin{display:none;width:16px;height:16px;border:2.5px solid transparent;border-top-color:var(--bg);border-radius:50%;animation:sp .7s linear infinite;margin:0 auto}
+.btn-go.loading .spin{display:block}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* MAIN PANEL */
+.main{background:var(--bg2);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;position:relative;overflow:hidden}
+.main::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%,#e8ff4705 0%,transparent 55%);pointer-events:none}
+
+/* 3D VIEWER */
+.viewer-3d{width:100%;max-width:500px;aspect-ratio:1/1;border-radius:var(--r);overflow:hidden;background:var(--bg);position:relative;z-index:1;transition:all .5s cubic-bezier(.4,0,.2,1)}
+.viewer-3d canvas{width:100%!important;height:100%!important;outline:none;cursor:grab}
+.viewer-3d canvas:active{cursor:grabbing}
+.viewer-3d.hidden{opacity:0;transform:scale(.92) translateY(-12px);pointer-events:none;max-height:0;margin:0;overflow:hidden}
+.viewer-label{text-align:center;font-size:10px;color:var(--text3);margin-top:8px;transition:opacity .4s}
+.viewer-label.hidden{opacity:0;pointer-events:none;height:0;margin:0}
+.viewer-label span{color:var(--lime)}
+.viewer-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:5}
+.viewer-loading .lring{width:40px;height:40px;border:3px solid #ffffff08;border-top-color:var(--lime);border-radius:50%;animation:sp 1s linear infinite}
+
+/* DESIGN HERO — replaces 3D when result is ready */
+.design-hero{width:100%;max-width:500px;position:relative;z-index:1;display:none}
+.design-hero.show{display:block;animation:dhIn .55s cubic-bezier(.2,0,.2,1)}
+@keyframes dhIn{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:none}}
+
+/* Parallax mockup container */
+.mockup-stage{width:100%;aspect-ratio:1/1;border-radius:var(--r);overflow:hidden;background:var(--bg);position:relative;cursor:none}
+.mockup-stage::after{content:'';position:absolute;inset:0;border-radius:var(--r);box-shadow:inset 0 0 0 1px rgba(232,255,71,.1);pointer-events:none;z-index:3}
+.mockup-parallax{width:108%;height:108%;position:absolute;top:-4%;left:-4%;transition:transform .08s ease-out;will-change:transform}
+.mockup-parallax img{width:100%;height:100%;object-fit:cover;border-radius:var(--r);display:block}
+.mockup-glow{position:absolute;inset:0;background:radial-gradient(ellipse at var(--mx,50%) var(--my,50%),rgba(232,255,71,.08) 0%,transparent 60%);pointer-events:none;z-index:2;transition:background .1s}
+.mockup-cursor{position:absolute;width:28px;height:28px;border:1.5px solid rgba(232,255,71,.6);border-radius:50%;pointer-events:none;z-index:10;transform:translate(-50%,-50%);transition:transform .05s,opacity .2s;opacity:0}
+.mockup-stage:hover .mockup-cursor{opacity:1}
+.mockup-label-bar{position:absolute;top:0;left:0;right:0;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;z-index:4;background:linear-gradient(to bottom,rgba(8,8,8,.7),transparent)}
+.mockup-label-bar .ml-title{font-family:var(--fd);font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--lime)}
+.mockup-label-bar .ml-zoom{width:26px;height:26px;border-radius:50%;background:#ffffff10;border:1px solid #ffffff15;color:var(--text2);font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s}
+.mockup-label-bar .ml-zoom:hover{background:var(--lime);color:var(--bg)}
+
+/* Miniature print image below */
+.print-mini{display:flex;align-items:center;gap:12px;margin-top:12px;background:var(--bg3);border:1px solid #ffffff08;border-radius:var(--rs);padding:10px 14px}
+.print-mini-img{width:52px;height:52px;border-radius:6px;object-fit:contain;background:var(--bg);flex-shrink:0;cursor:zoom-in;border:1px solid #ffffff10}
+.print-mini-img.circle{border-radius:50%}
+.print-mini-info{flex:1;min-width:0}
+.print-mini-info .pmi-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;font-family:var(--fd);font-weight:700;margin-bottom:2px}
+.print-mini-info .pmi-dims{font-size:11px;color:var(--lime);font-weight:600}
+.print-mini-info .pmi-note{font-size:10px;color:var(--text3);margin-top:1px}
+.print-mini-dl{padding:6px 12px;background:transparent;border:1.5px solid #ffffff12;border-radius:6px;font-size:10px;font-weight:600;color:var(--text2);cursor:pointer;transition:.2s;flex-shrink:0}
+.print-mini-dl:hover{border-color:var(--lime20);color:var(--lime)}
+
+/* RESULT PANEL (below design hero) */
+.result-panel{width:100%;max-width:500px;margin-top:12px;z-index:1}
+.res-label{font-family:var(--fd);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--lime);text-align:center;margin-bottom:5px}
+.res-title{font-family:var(--fd);font-size:18px;font-weight:800;text-align:center;margin-bottom:12px}
+.res-img{width:100%;border-radius:var(--r);overflow:hidden;position:relative}
+.res-img img{width:100%;display:block}
+.res-img .glow{position:absolute;inset:-20%;background:radial-gradient(ellipse,var(--lime10),transparent 65%);pointer-events:none;filter:blur(40px);z-index:0}
+.res-actions{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.ra{padding:9px 18px;border-radius:var(--rs);font-size:11px;font-weight:600;transition:.2s;border:1.5px solid}
+.ra-retry{background:transparent;border-color:#ffffff12;color:var(--text2)}.ra-retry:hover{border-color:var(--lime20);color:var(--text)}
+.ra-order{background:var(--lime);border-color:var(--lime);color:var(--bg);font-family:var(--fd);font-weight:700}.ra-order:hover{box-shadow:0 6px 18px #e8ff4728}
+.summary{background:var(--bg3);border:1px solid #ffffff06;border-radius:var(--rs);padding:14px;margin-top:12px}
+.srow{display:flex;justify-content:space-between;font-size:11px;padding:4px 0;color:var(--text2)}.srow span:last-child{color:var(--text);font-weight:500}
+.stotal{display:flex;justify-content:space-between;font-size:13px;padding:8px 0 0;margin-top:5px;border-top:1px solid #ffffff08;font-family:var(--fd);font-weight:700}.stotal span:last-child{color:var(--lime)}
+
+/* LIGHTBOX / ZOOM */
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:9999;display:none;align-items:center;justify-content:center;cursor:zoom-out;backdrop-filter:blur(10px)}
+.lightbox.open{display:flex;animation:lbIn .2s ease}
+@keyframes lbIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+.lightbox img{max-width:90vw;max-height:85vh;object-fit:contain;border-radius:14px;box-shadow:0 0 100px rgba(232,255,71,.12)}
+.lb-close{position:absolute;top:18px;right:22px;width:42px;height:42px;border-radius:50%;background:#ffffff12;border:1px solid #ffffff20;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s}
+.lb-close:hover{background:var(--lime);color:var(--bg)}
+.lb-download{position:absolute;bottom:22px;right:22px;padding:10px 22px;background:var(--lime);color:var(--bg);border:none;border-radius:var(--rs);font-family:var(--fd);font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.5px;transition:.2s}
+.lb-download:hover{box-shadow:0 6px 20px #e8ff4740;transform:translateY(-1px)}
+.lb-tag{position:absolute;bottom:22px;left:22px;font-size:10px;color:#ffffff50;font-family:var(--fd);letter-spacing:1px}
+
+/* ADMIN PANEL */
+.admin-fab{position:fixed;bottom:82px;right:20px;width:40px;height:40px;border-radius:50%;background:var(--bg3);border:1px solid #ffffff08;color:var(--text3);font-size:15px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:89;transition:.2s;opacity:.35}
+.admin-fab:hover{opacity:1;border-color:var(--lime20);color:var(--lime)}
+.admin-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9998;display:none;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+.admin-overlay.open{display:flex}
+.admin-panel{background:var(--bg2);border:1px solid #ffffff12;border-radius:20px;width:min(780px,96vw);max-height:90vh;overflow:hidden;display:flex;flex-direction:column;animation:lbIn .2s ease}
+.admin-hd{padding:18px 22px;border-bottom:1px solid #ffffff08;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.admin-hd h3{font-family:var(--fd);font-size:15px;font-weight:800;letter-spacing:-.3px}
+.admin-hd-right{display:flex;align-items:center;gap:10px}
+.admin-body{overflow-y:auto;padding:20px 22px;flex:1}
+.admin-body::-webkit-scrollbar{width:3px}.admin-body::-webkit-scrollbar-thumb{background:#333}
+
+/* Admin login */
+.admin-login{text-align:center;padding:50px 20px}
+.admin-login .lock{font-size:36px;margin-bottom:16px}
+.admin-login h4{font-family:var(--fd);font-size:18px;font-weight:800;margin-bottom:6px}
+.admin-login p{font-size:12px;color:var(--text3);margin-bottom:28px}
+.admin-login input{width:100%;max-width:300px;padding:13px 16px;background:var(--bg3);border:1.5px solid #ffffff12;border-radius:var(--rs);font-family:var(--fb);font-size:13px;color:var(--text);outline:none;transition:.2s;display:block;margin:0 auto 12px}
+.admin-login input:focus{border-color:var(--lime)}
+.admin-login button{width:100%;max-width:300px;padding:12px;background:var(--lime);color:var(--bg);border:none;border-radius:var(--rs);font-family:var(--fd);font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.5px;text-transform:uppercase}
+/* Admin stats */
+.admin-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+.stat-box{background:var(--bg3);border:1px solid #ffffff08;border-radius:var(--rs);padding:14px;text-align:center}
+.stat-n{font-family:var(--fd);font-size:26px;font-weight:800;color:var(--lime)}
+.stat-l{font-size:10px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
+/* Admin filters */
+.admin-filters{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.af{padding:5px 12px;border-radius:6px;font-size:10px;font-weight:600;border:1.5px solid #ffffff10;background:transparent;color:var(--text3);cursor:pointer;transition:.2s}
+.af.on{border-color:var(--lime);color:var(--lime);background:var(--lime10)}
+/* Order rows */
+.order-card{background:var(--bg3);border:1px solid #ffffff08;border-radius:var(--rs);padding:14px;margin-bottom:10px;transition:.2s}
+.order-card:hover{border-color:#ffffff15}
+.order-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.order-id{font-size:9px;color:var(--text3);font-family:var(--fd);letter-spacing:1px}
+.badge-status{padding:3px 9px;border-radius:4px;font-size:9px;font-weight:700;text-transform:uppercase}
+.badge-status.pending{background:#ff444418;color:#ff6666;border:1px solid #ff444428}
+.badge-status.paid{background:#4ade8018;color:#4ade80;border:1px solid #4ade8028}
+.order-info{font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.7}
+.order-info b{color:var(--text)}
+.order-actions{display:flex;gap:6px;flex-wrap:wrap}
+.oa{padding:5px 12px;border-radius:6px;font-size:10px;font-weight:600;border:1.5px solid;cursor:pointer;transition:.2s;background:transparent;font-family:var(--fb)}
+.oa-view{border-color:var(--lime20);color:var(--lime)}.oa-view:hover{background:var(--lime10)}
+.oa-dl{border-color:#ffffff15;color:var(--text2)}.oa-dl:hover{border-color:var(--lime20);color:var(--lime)}
+.oa-paid{border-color:#4ade8030;color:#4ade80}.oa-paid:hover{background:#4ade8015}
+.oa-del{border-color:#ff444420;color:#ff6666}.oa-del:hover{background:#ff444415}
+.order-thumb{width:44px;height:44px;border-radius:6px;object-fit:cover;border:1px solid #ffffff10}
+.order-imgs{display:flex;gap:6px;margin-bottom:8px}
+
+/* CHATBOT */
+.chat-fab{position:fixed;bottom:20px;right:20px;width:52px;height:52px;border-radius:50%;background:var(--lime);border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px #e8ff4740;z-index:90;font-size:22px;transition:.2s}
+.chat-fab:hover{transform:scale(1.08)}
+.chat-win{position:fixed;bottom:82px;right:20px;width:340px;max-height:480px;background:var(--bg2);border:1px solid #ffffff10;border-radius:var(--r);z-index:90;display:flex;flex-direction:column;opacity:0;pointer-events:none;transform:translateY(10px) scale(.96);transition:.25s}
+.chat-win.open{opacity:1;pointer-events:all;transform:none}
+.chat-hd{padding:14px 16px;border-bottom:1px solid #ffffff08;display:flex;align-items:center;justify-content:space-between}
+.chat-hd h4{font-family:var(--fd);font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
+.dot{width:7px;height:7px;border-radius:50%;background:#4ade80;animation:pu 2s infinite}
+@keyframes pu{0%,100%{opacity:1}50%{opacity:.4}}
+.chat-x{background:none;border:none;color:var(--text2);font-size:16px}
+.chat-bd{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;max-height:300px}
+.chat-bd::-webkit-scrollbar{width:3px}.chat-bd::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
+.cm{max-width:85%;padding:10px 13px;border-radius:12px;font-size:12px;line-height:1.5}
+.cm.bot{background:var(--bg4);align-self:flex-start;border-bottom-left-radius:4px}
+.cm.usr{background:var(--lime);color:var(--bg);align-self:flex-end;border-bottom-right-radius:4px;font-weight:500}
+.chat-qk{display:flex;flex-wrap:wrap;gap:5px;padding:0 14px 8px}
+.cq{padding:5px 10px;border-radius:14px;border:1px solid #ffffff12;background:transparent;color:var(--text2);font-size:10px;transition:.2s;font-family:var(--fb)}
+.cq:hover{border-color:var(--lime);color:var(--lime)}
+.chat-inp{display:flex;gap:6px;padding:8px 14px 14px}
+.chat-inp input{flex:1;padding:9px 12px;background:var(--bg3);border:1.5px solid #ffffff10;border-radius:20px;color:var(--text);font-size:12px;outline:none;font-family:var(--fb)}
+.chat-inp input:focus{border-color:var(--lime)}
+.chat-inp button{width:34px;height:34px;border-radius:50%;background:var(--lime);border:none;color:var(--bg);font-size:14px;display:flex;align-items:center;justify-content:center}
+
+/* MODAL */
+.modal-ov{position:fixed;inset:0;z-index:200;background:#000d;backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:.3s}
+.modal-ov.show{opacity:1;pointer-events:all}
+.modal{background:var(--bg2);border:1px solid #ffffff10;border-radius:var(--r);padding:28px;max-width:420px;width:90%;position:relative}
+.modal h3{font-family:var(--fd);font-size:16px;font-weight:700;margin-bottom:5px}
+.modal>p{font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.4}
+.modal label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;margin-top:10px}
+.modal input{width:100%;padding:11px 12px;background:var(--bg3);border:1.5px solid #ffffff12;border-radius:var(--rs);color:var(--text);font-family:var(--fb);font-size:12px;outline:none}
+.modal input:focus{border-color:var(--lime)}
+.modal-btn{width:100%;padding:11px;background:var(--lime);color:var(--bg);font-family:var(--fd);font-weight:700;font-size:12px;border:none;border-radius:var(--rs);cursor:pointer;margin-top:14px}
+.modal-x{position:absolute;top:12px;right:12px;width:26px;height:26px;border-radius:50%;background:var(--bg3);border:1px solid #ffffff10;color:var(--text2);display:flex;align-items:center;justify-content:center;font-size:13px}
+.modal-x:hover{background:var(--lime);color:var(--bg)}
+.modal-note{font-size:9px;color:var(--text3);margin-top:8px;text-align:center}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);padding:11px 22px;border-radius:var(--rs);font-size:12px;font-weight:500;z-index:300;transition:.3s;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0)}.toast.ok{background:var(--lime);color:var(--bg)}.toast.err{background:#f44;color:#fff}
+
+/* Animation */
+.fadein{animation:fi .5s ease}
+@keyframes fi{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="index.html" class="logo">VIV<span class="logo-o"><svg viewBox="0 0 24 24"><polygon points="9,6 9,18 19,12"/></svg></span><span class="logo-gift">gift</span></a>
+  <div style="display:flex;align-items:center;gap:10px">
+    <a href="index.html" style="font-size:11px;color:var(--text3);text-decoration:none;transition:.2s;padding:6px 12px;border-radius:var(--rs);border:1px solid #ffffff08" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">← Inicio</a>
+    <span style="font-size:10px;color:var(--text3);background:var(--bg3);padding:5px 10px;border-radius:20px;border:1px solid #ffffff08">✦ Crear tu regalo</span>
+  </div>
+</nav>
+
+<!-- Keys loaded from Supabase automatically -->
+
+<div class="toast" id="toast"></div>
+
+<div class="app">
+<!-- SIDEBAR -->
+<div class="sidebar">
+
+  <!-- PRODUCT SELECTOR -->
+  <div>
+    <div class="step-label">Producto</div>
+    <div class="step-title">Elige tu producto</div>
+    <div id="pgrid" style="display:grid;grid-template-columns:1fr 1fr;gap:7px"></div>
+  </div>
+
+  <!-- FLOW -->
+  <div>
+    <div class="step-label">Paso 1</div>
+    <div class="step-title">¿Qué quieres hacer?</div>
+    <div class="flow-tabs">
+      <button class="flow-tab on" data-flow="photo" onclick="setFlow('photo')">📷 Transformar foto</button>
+      <button class="flow-tab" data-flow="text" onclick="setFlow('text')">✏️ Describir idea</button>
+    </div>
+  </div>
+
+  <!-- PHOTO FLOW -->
+  <div class="flow-panel on" id="fpPhoto">
+    <div class="step-label">Paso 2</div>
+    <div class="step-title">Tu foto</div>
+    <div class="upload-zone" id="upzone" onclick="document.getElementById('fileIn').click()">
+      <div style="font-size:24px;opacity:.4;margin-bottom:4px">📷</div>
+      <div style="font-size:11px;color:var(--text2)"><b style="color:var(--lime)">Arrastra o toca</b><br>Tu foto, mascota, personaje</div>
+      <input type="file" id="fileIn" accept="image/*" style="display:none">
+    </div>
+    <div style="margin-top:12px">
+      <div class="step-label">Paso 3</div>
+      <div class="step-title">Estilo</div>
+      <div class="spills" id="styles1"></div>
+    </div>
+  </div>
+
+  <!-- TEXT FLOW -->
+  <div class="flow-panel" id="fpText">
+    <div class="step-label">Paso 2</div>
+    <div class="step-title">Describe tu idea</div>
+    <textarea class="prompt-box" id="prompt" placeholder="Un dragón dorado japonés con detalles en rojo y fondo negro..."></textarea>
+    <div class="phint">Cuanto más detalle, mejor resultado.</div>
+    <div style="margin-top:12px">
+      <div class="step-label">Paso 3</div>
+      <div class="step-title">Estilo</div>
+      <div class="spills" id="styles2"></div>
+    </div>
+  </div>
+
+  <!-- DYNAMIC ZONES -->
+  <div>
+    <div class="step-label" id="zoneStep">Paso 4</div>
+    <div class="step-title">¿Dónde va el diseño?</div>
+    <div class="zones" id="zonesContainer"></div>
+    <button id="btnMedidas" onclick="showMedidas()" style="margin-top:10px;padding:7px 14px;border-radius:var(--rs);border:1.5px solid #ffffff12;background:transparent;color:var(--text2);font-size:10px;font-weight:600;display:flex;align-items:center;gap:5px;transition:.2s;cursor:pointer">📐 Ver medidas del producto</button>
+  </div>
+
+  <!-- MEDIDAS MODAL -->
+  <div class="modal-ov" id="medidasModal" onclick="if(event.target===this)this.classList.remove('show')">
+    <div class="modal" style="max-width:500px">
+      <button class="modal-x" onclick="document.getElementById('medidasModal').classList.remove('show')">×</button>
+      <h3 id="medidasTitle">Medidas</h3>
+      <div style="margin-top:12px;text-align:center">
+        <img id="medidasImg" src="" style="max-width:100%;border-radius:var(--r)">
+      </div>
+    </div>
+  </div>
+
+  <!-- EXTRAS -->
+  <div>
+    <div class="step-label">Paso 5</div>
+    <div class="step-title">Experiencia extra</div>
+    <div class="ext"><div><div class="ext-n">QR en producto</div><div class="ext-d">Escanea y escucha</div></div><div style="display:flex;align-items:center;gap:7px"><span class="ext-p">Incluido</span><div class="tog on"></div></div></div>
+    <div class="ext"><div><div class="ext-n">QR en caja</div><div class="ext-d">Imagen o video sorpresa</div></div><div style="display:flex;align-items:center;gap:7px"><span class="ext-p">+3€</span><div class="tog" data-price="3" onclick="this.classList.toggle('on');updateTotal()"></div></div></div>
+    <div class="ext"><div><div class="ext-n">Voz en la caja</div><div class="ext-d">Suena al abrirla</div></div><div style="display:flex;align-items:center;gap:7px"><span class="ext-p">+15€</span><div class="tog" data-price="15" onclick="this.classList.toggle('on');updateTotal()"></div></div></div>
+    <div class="ext"><div><div class="ext-n">Caja personalizada</div><div class="ext-d">Tu diseño en la caja</div></div><div style="display:flex;align-items:center;gap:7px"><span class="ext-p">+5€</span><div class="tog" data-price="5" onclick="this.classList.toggle('on');updateTotal()"></div></div></div>
+  </div>
+
+  <!-- AUDIO RECORDER -->
+  <div>
+    <div class="step-label">Paso 6</div>
+    <div class="step-title">Tu mensaje de voz</div>
+    <p style="font-size:10px;color:var(--text3);margin-bottom:10px">Graba el mensaje que sonará al abrir la caja. Máximo 30 segundos.</p>
+    
+    <div id="audioRecorder">
+      <!-- Record button -->
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button id="recBtn" onclick="toggleRecording()" style="display:flex;align-items:center;gap:6px;padding:10px 16px;border-radius:var(--rs);border:1.5px solid #ff4444;background:transparent;color:#ff4444;font-size:11px;font-weight:600;transition:.2s">
+          <span id="recDot" style="width:8px;height:8px;border-radius:50%;background:#ff4444"></span>
+          <span id="recText">Grabar mensaje</span>
+        </button>
+        <span id="recTimer" style="font-size:11px;color:var(--text3);font-variant-numeric:tabular-nums;display:none">00:00 / 00:30</span>
+      </div>
+      
+      <!-- Audio preview (hidden until recorded) -->
+      <div id="audioPreview" style="display:none;margin-top:10px;background:var(--bg3);border-radius:var(--rs);padding:10px;border:1px solid #ffffff08">
+        <div style="display:flex;align-items:center;gap:8px">
+          <button onclick="playRecording()" id="playBtn" style="width:32px;height:32px;border-radius:50%;background:var(--lime);border:none;color:var(--bg);font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0">▶</button>
+          <div style="flex:1">
+            <div id="waveform" style="height:24px;background:var(--bg4);border-radius:4px;overflow:hidden;position:relative">
+              <div id="waveProgress" style="height:100%;width:0%;background:var(--lime20);transition:width .1s"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:3px">
+              <span id="audioDuration" style="font-size:9px;color:var(--text3)">0s</span>
+              <span style="font-size:9px;color:var(--lime)">✓ Grabado</span>
+            </div>
+          </div>
+          <button onclick="deleteRecording()" style="width:24px;height:24px;border-radius:50%;background:var(--bg4);border:1px solid #ffffff10;color:var(--text3);font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" title="Borrar">×</button>
+        </div>
+      </div>
+      
+      <!-- Skip option -->
+      <div style="margin-top:8px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text3);cursor:pointer">
+          <input type="checkbox" id="skipAudio" style="accent-color:var(--lime)" checked>
+          Sin mensaje de voz (solo QR visual)
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn-go" id="btnGo" onclick="generate()">
+    <span class="bt">✦ Crear mi diseño</span>
+    <div class="spin"></div>
+  </button>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <!-- 3D VIEWER (Three.js) — se oculta cuando hay resultado -->
+  <div class="viewer-3d" id="viewer3d">
+    <div class="viewer-loading" id="viewerLoading"><div class="lring"></div></div>
+  </div>
+  <div class="viewer-label" id="viewerLabel">Mueve el producto con el ratón · <span>Modelo 3D real</span></div>
+
+  <!-- DESIGN HERO — aparece cuando Atlas devuelve el mockup -->
+  <div class="design-hero" id="designHero">
+    <div class="mockup-stage" id="mockupStage"
+         onmousemove="handleMockupMove(event)"
+         onmouseleave="handleMockupLeave()"
+         onclick="openLightboxFromHero()">
+      <div class="mockup-parallax" id="mockupParallax">
+        <img id="mockupHeroImg" src="" alt="Tu diseño">
+      </div>
+      <div class="mockup-glow" id="mockupGlow"></div>
+      <div class="mockup-cursor" id="mockupCursor"></div>
+      <div class="mockup-label-bar">
+        <span class="ml-title" id="mockupHeroLabel">✦ Mockup</span>
+        <button class="ml-zoom" onclick="event.stopPropagation();openLightboxFromHero()" title="Ver en grande">⤢</button>
+      </div>
+    </div>
+    <!-- Miniatura de impresión -->
+    <div class="print-mini" id="printMini">
+      <img id="printMiniImg" src="" class="print-mini-img" title="Ver diseño de impresión" onclick="openLightboxPrint()">
+      <div class="print-mini-info">
+        <div class="pmi-label">Diseño para imprimir</div>
+        <div class="pmi-dims" id="printMiniDims">—</div>
+        <div class="pmi-note">Listo para producción · 300dpi</div>
+      </div>
+      <button class="print-mini-dl" onclick="downloadPrintImage()" title="Descargar">⬇</button>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="result-panel" id="resultPanel" style="display:none"></div>
+</div>
+</div>
+
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+  <button class="lb-close" onclick="document.getElementById('lightbox').classList.remove('open')">×</button>
+  <img id="lbImg" src="" alt="Diseño">
+  <span class="lb-tag" id="lbTag"></span>
+  <button class="lb-download" id="lbDl" onclick="downloadLbImage()">⬇ Descargar</button>
+</div>
+
+<!-- ADMIN PANEL -->
+<button class="admin-fab" id="adminFab" onclick="openAdmin()" title="Panel admin">🔐</button>
+<div class="admin-overlay" id="adminOverlay" onclick="closeAdminOverlay(event)">
+  <div class="admin-panel" onclick="event.stopPropagation()">
+    <div class="admin-hd">
+      <h3>🛠 Panel VIVOgift</h3>
+      <div class="admin-hd-right">
+        <span id="adminUser" style="font-size:10px;color:var(--text3)"></span>
+        <button onclick="closeAdmin()" style="background:none;border:none;color:var(--text2);font-size:18px;cursor:pointer;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center" onmouseover="this.style.color='var(--lime)'" onmouseout="this.style.color='var(--text2)'">×</button>
+      </div>
+    </div>
+    <div class="admin-body" id="adminBody">
+      <!-- Login screen shown by default -->
+      <div class="admin-login" id="adminLogin">
+        <div class="lock">🔐</div>
+        <h4>Acceso Admin</h4>
+        <p>Área privada de producción VIVOgift</p>
+        <input type="password" id="adminPass" placeholder="Contraseña" onkeydown="if(event.key==='Enter')checkAdminPass()">
+        <button onclick="checkAdminPass()">Entrar →</button>
+      </div>
+      <!-- Dashboard (hidden until login) -->
+      <div id="adminDash" style="display:none">
+        <div class="admin-stats" id="adminStats">
+          <div class="stat-box"><div class="stat-n" id="statTotal">—</div><div class="stat-l">Pedidos</div></div>
+          <div class="stat-box"><div class="stat-n" id="statPending">—</div><div class="stat-l">Pendientes</div></div>
+          <div class="stat-box"><div class="stat-n" id="statRevenue">—</div><div class="stat-l">€ Total</div></div>
+        </div>
+        <div class="admin-filters">
+          <button class="af on" onclick="filterOrders('all',this)">Todos</button>
+          <button class="af" onclick="filterOrders('pending',this)">Pendientes</button>
+          <button class="af" onclick="filterOrders('paid',this)">Pagados</button>
+        </div>
+        <div id="ordersList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CHATBOT -->
+<button class="chat-fab" onclick="toggleChat()">💬</button>
+<div class="chat-win" id="chatWin">
+  <div class="chat-hd">
+    <h4><span class="dot"></span> Asistente VIVOgift</h4>
+    <button class="chat-x" onclick="toggleChat()">×</button>
+  </div>
+  <div class="chat-bd" id="chatBd">
+    <div class="cm bot">¡Hola! Soy tu asistente VIVOgift. Te guío paso a paso para crear tu regalo personalizado. ¿Qué quieres saber?</div>
+  </div>
+  <div class="chat-qk" id="chatQk">
+    <button class="cq" onclick="chatQuick(this)">¿Cómo funciona?</button>
+    <button class="cq" onclick="chatQuick(this)">¿Qué es el QR?</button>
+    <button class="cq" onclick="chatQuick(this)">¿Cuánto tarda?</button>
+    <button class="cq" onclick="chatQuick(this)">Precios</button>
+  </div>
+  <div class="chat-inp">
+    <input type="text" id="chatIn" placeholder="Escribe tu pregunta..." onkeydown="if(event.key==='Enter')sendChat()">
+    <button onclick="sendChat()">→</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════
+// SUPABASE CONFIG
+// ═══════════════════════════════════
+const SUPABASE_URL = 'https://rtjgcpklpyolzsdjjtdb.supabase.co';
+const SUPABASE_STORAGE = SUPABASE_URL + '/storage/v1/object/public/assets';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0amdjcGtscHlvbHpzZGpqdGRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NjI5NzMsImV4cCI6MjA4OTQzODk3M30.cXX0916XOXbe3DsR-rBV__9Boi4Pyh30z1g5LsJGpeY';
+
+// ═══════════════════════════════════
+// PRODUCTS — update glb filenames when you upload them
+// ═══════════════════════════════════
+const PRODUCTS = [
+  {
+    id: 'cenicero_led',
+    name: 'Cenicero LED',
+    price: 20,
+    badge: 'NEW',
+    img: SUPABASE_STORAGE + '/1-front.png',
+    mockupImg: SUPABASE_STORAGE + '/mockup-image-led-cenicero.png',
+    medidasImg: SUPABASE_STORAGE + '/3-front.png',
+    glb: SUPABASE_STORAGE + '/cenicero.glb',
+    zones: [
+      {id:'tapa',name:'Tapa',icon:'⬆',default:true, print:{w_mm:50,h_mm:50,shape:'circle'}},
+      {id:'bordes',name:'Bordes',icon:'◯', print:{w_mm:157,h_mm:30,shape:'rect'}}
+    ],
+    promptCtx: 'circular design for the lid of a portable car ashtray',
+    printSize: 'Ø 5cm (tapa)',
+    mockup: {top:'5%',left:'25%',width:'50%',height:'30%',borderRadius:'50%',transform:'perspective(500px) rotateX(45deg)'}
+  },
+  {
+    id: 'mechero',
+    name: 'Mechero Custom',
+    price: 14,
+    img: SUPABASE_STORAGE + '/1-metal.png',
+    mockupImg: SUPABASE_STORAGE + '/mockup-mechero.png',
+    medidasImg: SUPABASE_STORAGE + '/MEDIDAS-ENCENDEDOR.png',
+    glb: SUPABASE_STORAGE + '/mechero.glb',
+    zones: [
+      {id:'cuerpo',name:'Cuerpo',icon:'▮',default:true, print:{w_mm:25,h_mm:78.5,shape:'rect'}}
+    ],
+    promptCtx: 'design for the flat rectangular side panel of a metallic lighter',
+    printSize: '25mm × 78.5mm',
+    mockup: {top:'18%',left:'32%',width:'36%',height:'52%',borderRadius:'3px',transform:'perspective(500px) rotateY(-3deg)'}
+  },
+  {
+    id: 'grinder',
+    name: 'Grinder Natural',
+    price: 22,
+    img: SUPABASE_STORAGE + '/1-madera%20(1).png',
+    mockupImg: SUPABASE_STORAGE + '/mockup-grinder-wood.png',
+    medidasImg: SUPABASE_STORAGE + '/MEDIDAS-GRINDER-MADERA.png',
+    glb: SUPABASE_STORAGE + '/grinder.glb',
+    zones: [
+      {id:'tapa_sup',name:'Tapa superior',icon:'⬆',default:true, print:{w_mm:55,h_mm:55,shape:'circle'}},
+      {id:'tapa_inf',name:'Tapa inferior',icon:'⬇', print:{w_mm:55,h_mm:55,shape:'circle'}},
+      {id:'bordes',name:'Bordes',icon:'◯', print:{w_mm:172,h_mm:15,shape:'rect'}}
+    ],
+    promptCtx: 'circular design for the flat wooden top of a grinder',
+    printSize: 'Ø 55mm (tapa)',
+    mockup: {top:'10%',left:'20%',width:'60%',height:'50%',borderRadius:'50%',transform:'perspective(500px) rotateX(25deg)'}
+  },
+  {
+    id: 'posavasos',
+    name: 'Posavasos',
+    price: 18,
+    img: SUPABASE_STORAGE + '/1-1-black.png',
+    mockupImg: SUPABASE_STORAGE + '/mockup-portavasos.png',
+    medidasImg: SUPABASE_STORAGE + '/MEDIDAS-PORTAVASOS.png',
+    glb: SUPABASE_STORAGE + '/portavaso.glb',
+    zones: [
+      {id:'cara_sup',name:'Cara superior',icon:'⬆',default:true, print:{w_mm:80,h_mm:80,shape:'circle'}},
+      {id:'cara_inf',name:'Cara inferior',icon:'⬇', print:{w_mm:80,h_mm:80,shape:'circle'}}
+    ],
+    promptCtx: 'circular design for a round coaster surface',
+    printSize: 'Ø 8cm (cara)',
+    mockup: {top:'15%',left:'15%',width:'55%',height:'55%',borderRadius:'50%',transform:'perspective(500px) rotateX(30deg)'}
+  },
+  {
+    id: 'cenicero_home',
+    name: 'Cenicero Home',
+    price: 25,
+    img: SUPABASE_STORAGE + '/3-home-ceni.png',
+    mockupImg: SUPABASE_STORAGE + '/mockup-image-cenicero-home.png',
+    medidasImg: SUPABASE_STORAGE + '/1-home-ceni.png',
+    glb: SUPABASE_STORAGE + '/cenicero-home.glb',
+    zones: [
+      {id:'tapa',name:'Tapa',icon:'⬆',default:true, print:{w_mm:92,h_mm:92,shape:'circle'}}
+    ],
+    promptCtx: 'circular design for the wooden lid of a home ashtray',
+    printSize: 'Ø 92mm (tapa)',
+    mockup: {top:'10%',left:'10%',width:'60%',height:'40%',borderRadius:'50%',transform:'perspective(500px) rotateX(35deg)'}
+  }
+];
+
+const STYLES = [
+  {id:'original',label:'📌 Original'},
+  {id:'anime',label:'✨ Anime'},
+  {id:'comic',label:'💥 Cómic'},
+  {id:'realista',label:'📸 Realista'},
+  {id:'minimal',label:'◻ Minimal'},
+  {id:'acuarela',label:'🎨 Acuarela'},
+  {id:'pop',label:'🎯 Pop Art'},
+  {id:'pixel',label:'👾 Pixel'},
+  {id:'dark',label:'🌙 Dark'}
+];
+
+const STYLE_PROMPTS = {
+  original: null,
+  anime: 'anime manga art style with bold outlines and vivid cel-shaded colors',
+  comic: 'comic book illustration with halftone dots, bold inks, dynamic composition',
+  realista: 'photorealistic hyper-detailed digital art',
+  minimal: 'minimalist clean design with geometric shapes and muted tones',
+  acuarela: 'soft watercolor painting with bleeding edges and organic flow',
+  pop: 'bold pop art Warhol style with strong contrast and bright flat colors',
+  pixel: 'retro pixel art 16-bit game style',
+  dark: 'dark gothic dramatic style with deep shadows and moody lighting'
+};
+
+// ═══════════════════════════════════
+// STATE
+// ═══════════════════════════════════
+const S = {
+  product: PRODUCTS[0],
+  flow: 'photo',
+  photo: null,
+  prompt: '',
+  style: 'original',
+  selectedZones: ['tapa'],
+  result: null,
+  audioBlob: null,
+  atlasKey: null,
+  geminiKey: null
+};
+
+// ═══════════════════════════════════
+// INIT
+// ═══════════════════════════════════
+async function init() {
+  renderProducts();
+  renderStyles();
+  renderZones();
+  setupUpload();
+  initThreeJS();
+  
+  // Load API keys from Supabase
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/config?select=key,value`, {
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` }
+    });
+    if(res.ok) {
+      const rows = await res.json();
+      for(const row of rows) {
+        if(row.key === 'atlas_key' && row.value) S.atlasKey = row.value;
+        if(row.key === 'gemini_key' && row.value) S.geminiKey = row.value;
+      }
+      if(S.atlasKey) console.log('✦ Atlas Cloud conectado');
+      if(S.geminiKey) console.log('✦ Gemini conectado');
+    }
+  } catch(e) { console.warn('Keys load error:', e); }
+}
+
+// ═══════════════════════════════════
+// PRODUCT SELECTOR
+// ═══════════════════════════════════
+function renderProducts() {
+  document.getElementById('pgrid').innerHTML = PRODUCTS.map(p => `
+    <div class="pcard${p.id===S.product.id?' on':''}" onclick="selProduct('${p.id}')">
+      ${p.badge?`<span class="pbadge">${p.badge}</span>`:''}
+      <img src="${p.img}" alt="${p.name}" crossorigin="anonymous">
+      <div class="pn">${p.name}</div>
+      <div class="pp">desde ${p.price}€</div>
+    </div>
+  `).join('');
+}
+
+function selProduct(id) {
+  S.product = PRODUCTS.find(p => p.id === id);
+  S.selectedZones = S.product.zones.filter(z => z.default).map(z => z.id);
+  S.result = null;
+  
+  renderProducts();
+  renderZones();
+  
+  // Hide design hero, show 3D
+  hideDesignHero();
+  
+  // Load 3D model
+  if(S.product.glb) {
+    load3DModel(S.product.glb);
+    document.getElementById('viewerLabel').innerHTML = `Mueve el producto con el ratón · <span>Modelo 3D real</span>`;
+  }
+  
+  // Hide result panel
+  document.getElementById('resultPanel').style.display = 'none';
+  // Remove design overlay
+  currentDesignTexture = null;
+  if(currentModel) applyTextureToModel(currentModel, null);
+}
+
+// ═══════════════════════════════════
+// THREE.JS 3D ENGINE
+// ═══════════════════════════════════
+let threeScene, threeCamera, threeRenderer, threeControls;
+let currentModel = null;
+let currentDesignTexture = null;
+let originalMaterials = new Map();
+
+function initThreeJS() {
+  const container = document.getElementById('viewer3d');
+  const w = container.clientWidth;
+  const h = container.clientHeight;
+  
+  // Scene
+  threeScene = new THREE.Scene();
+  threeScene.background = new THREE.Color(0x080808);
+  
+  // Camera
+  threeCamera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+  threeCamera.position.set(0, 1.5, 3);
+  
+  // Renderer
+  threeRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  threeRenderer.setSize(w, h);
+  threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  threeRenderer.outputEncoding = THREE.sRGBEncoding;
+  threeRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+  threeRenderer.toneMappingExposure = 1.2;
+  threeRenderer.shadowMap.enabled = true;
+  container.appendChild(threeRenderer.domElement);
+  
+  // Controls
+  threeControls = new THREE.OrbitControls(threeCamera, threeRenderer.domElement);
+  threeControls.enableDamping = true;
+  threeControls.dampingFactor = 0.05;
+  threeControls.autoRotate = true;
+  threeControls.autoRotateSpeed = 2;
+  threeControls.minDistance = 1;
+  threeControls.maxDistance = 8;
+  threeControls.target.set(0, 0.5, 0);
+  
+  // Lights
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+  threeScene.add(ambientLight);
+  
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+  dirLight.position.set(3, 5, 3);
+  dirLight.castShadow = true;
+  threeScene.add(dirLight);
+  
+  const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+  dirLight2.position.set(-3, 3, -2);
+  threeScene.add(dirLight2);
+  
+  const rimLight = new THREE.DirectionalLight(0xe8ff47, 0.15);
+  rimLight.position.set(0, -2, -3);
+  threeScene.add(rimLight);
+  
+  // Resize
+  window.addEventListener('resize', () => {
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+    threeCamera.aspect = w / h;
+    threeCamera.updateProjectionMatrix();
+    threeRenderer.setSize(w, h);
+  });
+  
+  // Animate
+  function animate() {
+    requestAnimationFrame(animate);
+    threeControls.update();
+    threeRenderer.render(threeScene, threeCamera);
+  }
+  animate();
+  
+  // Load first product
+  load3DModel(S.product.glb);
+}
+
+function load3DModel(url) {
+  if(!url) return;
+  
+  // Show loading
+  const loading = document.getElementById('viewerLoading');
+  if(loading) loading.style.display = 'flex';
+  
+  // Remove old model
+  if(currentModel) {
+    threeScene.remove(currentModel);
+    currentModel = null;
+    originalMaterials.clear();
+  }
+  
+  const loader = new THREE.GLTFLoader();
+  loader.load(url, 
+    (gltf) => {
+      const model = gltf.scene;
+      
+      // Center and scale model
+      const box = new THREE.Box3().setFromObject(model);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const scale = 2.0 / maxDim;
+      model.scale.setScalar(scale);
+      model.position.sub(center.multiplyScalar(scale));
+      model.position.y -= (box.min.y * scale);
+      
+      // Store original materials and LOG mesh names for debugging
+      model.traverse((child) => {
+        if(child.isMesh && child.material) {
+          originalMaterials.set(child.uuid, child.material.clone());
+          console.log(`  Mesh: "${child.name}" | Material: "${child.material.name}" | UUID: ${child.uuid.slice(0,8)}`);
+        }
+      });
+      
+      // Store mesh list for zone mapping
+      const meshList = [];
+      model.traverse((child) => { if(child.isMesh) meshList.push(child); });
+      S.meshCount = meshList.length;
+      console.log(`  Total meshes: ${meshList.length}`);
+      
+      threeScene.add(model);
+      currentModel = model;
+      
+      // Store bounding box info
+      const localBox = new THREE.Box3().setFromObject(model);
+      const bSize = localBox.getSize(new THREE.Vector3());
+      console.log(`  Model size: ${bSize.x.toFixed(2)} x ${bSize.y.toFixed(2)} x ${bSize.z.toFixed(2)}`);
+      
+      // If there's already a design, apply it
+      if(currentDesignTexture) {
+        applyTextureToModel(model, currentDesignTexture);
+      }
+      
+      // Reset camera
+      threeControls.target.set(0, size.y * scale * 0.4, 0);
+      threeCamera.position.set(0, size.y * scale * 0.8, 3);
+      threeControls.update();
+      
+      // Hide loading
+      if(loading) loading.style.display = 'none';
+      console.log('✦ 3D model loaded:', url.split('/').pop());
+    },
+    (progress) => {
+      // Loading progress
+      if(progress.total) {
+        const pct = Math.round((progress.loaded / progress.total) * 100);
+        console.log(`Loading 3D: ${pct}%`);
+      }
+    },
+    (error) => {
+      console.error('3D load error:', error);
+      if(loading) loading.style.display = 'none';
+      toast('Error cargando modelo 3D', 'err');
+    }
+  );
+}
+
+function applyTextureToModel(model, texture) {
+  if(!model) return;
+  const meshes = [];
+  model.traverse((child) => { if(child.isMesh) meshes.push(child); });
+  
+  if(!texture) {
+    meshes.forEach(m => {
+      const orig = originalMaterials.get(m.uuid);
+      if(orig) { m.material = orig.clone(); m.material.needsUpdate = true; }
+    });
+    return;
+  }
+  
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.needsUpdate = true;
+  
+  meshes.forEach(mesh => {
+    const orig = originalMaterials.get(mesh.uuid);
+    mesh.material = orig ? orig.clone() : mesh.material.clone();
+    mesh.material.map = texture;
+    mesh.material.needsUpdate = true;
+  });
+  console.log(`✦ Texture applied to ${meshes.length} meshes`);
+}
+
+async function applyDesignTo3D(imageUrl) {
+  if(!imageUrl || !currentModel) {
+    currentDesignTexture = null;
+    if(currentModel) applyTextureToModel(currentModel, null);
+    return;
+  }
+  try {
+    let textureSrc = imageUrl;
+    if(imageUrl.startsWith('http')) {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      textureSrc = URL.createObjectURL(blob);
+    }
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.encoding = THREE.sRGBEncoding;
+      tex.flipY = false;
+      tex.needsUpdate = true;
+      currentDesignTexture = tex;
+      applyTextureToModel(currentModel, tex);
+      console.log('✦ Design applied (' + canvas.width + 'x' + canvas.height + ')');
+      if(textureSrc !== imageUrl) URL.revokeObjectURL(textureSrc);
+    };
+    img.onerror = (e) => console.error('Design load error:', e);
+    img.src = textureSrc;
+  } catch(err) {
+    console.error('applyDesignTo3D error:', err);
+  }
+}
+
+// ═══════════════════════════════════
+// ZONES — dynamic per product
+// ═══════════════════════════════════
+function renderZones() {
+  document.getElementById('zonesContainer').innerHTML = S.product.zones.map(z => `
+    <button class="zb${S.selectedZones.includes(z.id)?' on':''}" onclick="togZone('${z.id}')">${z.icon} ${z.name}</button>
+  `).join('');
+}
+
+function togZone(id) {
+  if(S.selectedZones.includes(id)) {
+    if(S.selectedZones.length > 1) S.selectedZones = S.selectedZones.filter(z => z !== id);
+  } else {
+    S.selectedZones.push(id);
+  }
+  renderZones();
+}
+
+function renderStyles() {
+  const html = STYLES.map(s =>
+    `<button class="sp${s.id===S.style?' on':''}" onclick="selStyle('${s.id}')">${s.label}</button>`
+  ).join('');
+  document.getElementById('styles1').innerHTML = html;
+  document.getElementById('styles2').innerHTML = html;
+}
+
+function selStyle(id) { S.style = id; renderStyles(); }
+
+function showMedidas() {
+  const p = S.product;
+  if(!p.medidasImg) { toast('Medidas no disponibles','err'); return; }
+  document.getElementById('medidasTitle').textContent = `📐 ${p.name} — Medidas reales`;
+  document.getElementById('medidasImg').src = p.medidasImg;
+  document.getElementById('medidasModal').classList.add('show');
+}
+
+function setFlow(f) {
+  S.flow = f;
+  document.querySelectorAll('.flow-tab').forEach(t => t.classList.toggle('on', t.dataset.flow===f));
+  document.getElementById('fpPhoto').classList.toggle('on', f==='photo');
+  document.getElementById('fpText').classList.toggle('on', f==='text');
+}
+
+// ═══════════════════════════════════
+// UPLOAD
+// ═══════════════════════════════════
+function setupUpload() {
+  const zone = document.getElementById('upzone');
+  const inp = document.getElementById('fileIn');
+  zone.ondragover = e => { e.preventDefault(); zone.style.borderColor='var(--lime)'; };
+  zone.ondragleave = () => zone.style.borderColor='';
+  zone.ondrop = e => { e.preventDefault(); zone.style.borderColor=''; if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); };
+  inp.onchange = e => { if(e.target.files[0]) loadFile(e.target.files[0]); };
+}
+
+function loadFile(file) {
+  if(!file.type.startsWith('image/')) return;
+  const r = new FileReader();
+  r.onload = e => {
+    S.photo = e.target.result;
+    const z = document.getElementById('upzone');
+    z.classList.add('has');
+    z.innerHTML = `<button class="up-clear" onclick="event.stopPropagation();clearFile()">×</button><img class="up-preview" src="${S.photo}">`;
+  };
+  r.readAsDataURL(file);
+}
+
+function clearFile() {
+  S.photo = null;
+  const z = document.getElementById('upzone');
+  z.classList.remove('has');
+  z.innerHTML = `<div style="font-size:24px;opacity:.4;margin-bottom:4px">📷</div><div style="font-size:11px;color:var(--text2)"><b style="color:var(--lime)">Arrastra o toca</b><br>Tu foto, mascota, personaje</div><input type="file" id="fileIn" accept="image/*" style="display:none">`;
+  setupUpload();
+}
+
+// ═══════════════════════════════════
+// EXTRAS & TOTAL
+// ═══════════════════════════════════
+function getTotal() {
+  let t = S.product.price;
+  document.querySelectorAll('.tog.on[data-price]').forEach(el => t += parseInt(el.dataset.price));
+  return t;
+}
+function updateTotal() {
+  const btn = document.querySelector('.ra-order');
+  if(btn) btn.textContent = `Pedir → ${getTotal()}€`;
+}
+
+// ═══════════════════════════════════
+// GENERATION — ATLAS CLOUD NANO BANANA
+// ═══════════════════════════════════
+async function generate() {
+  if(!S.atlasKey) { toast('Error de configuración. Contacta al admin.','err'); return; }
+
+  if(S.flow === 'photo' && !S.photo) { toast('Sube una foto primero','err'); return; }
+  if(S.flow === 'text') { S.prompt = document.getElementById('prompt').value.trim(); if(!S.prompt) { toast('Describe lo que quieres','err'); return; } }
+
+  const btn = document.getElementById('btnGo');
+  btn.classList.add('loading'); btn.disabled = true;
+  
+  // Show generating overlay on 3D viewer
+  showGeneratingOverlay(true);
+
+  try {
+    let designImage;
+    
+    if(S.flow === 'photo' && S.photo) {
+      if(S.style === 'original') {
+        designImage = S.photo;
+      } else {
+        toast('Transformando tu foto...','ok');
+        designImage = await atlasStyleTransform(S.photo, STYLE_PROMPTS[S.style]);
+      }
+    } else {
+      // TEXT flow: generate image from description
+      toast('Generando diseño...','ok');
+      designImage = await atlasT2I(S.prompt, STYLE_PROMPTS[S.style] || 'high quality digital art');
+    }
+    
+    // CRITICAL: Convert Atlas URL to base64 dataURI BEFORE sending to mockup
+    // Atlas URLs have CORS restrictions — they work in <img> but NOT in fetch from other domains
+    if(designImage && designImage.startsWith('http')) {
+      console.log('✦ Converting design URL to dataURI for mockup...');
+      designImage = await imageUrlToDataUri(designImage);
+      console.log('✦ Design converted, length:', designImage.length);
+    }
+    
+    S.designRaw = designImage;
+    
+    // Step 2: Create mockup — insert design into product photo
+    toast('Generando muestra (mockup)...','ok');
+    let mockupUrl = await atlasCreateMockup(designImage);
+    
+    // Convert mockup URL to blob for display (CORS)
+    if(mockupUrl && mockupUrl.startsWith('http')) {
+      try {
+        const resp = await fetch(mockupUrl);
+        const blob = await resp.blob();
+        mockupUrl = URL.createObjectURL(blob);
+      } catch(e) { console.warn('Mockup blob conversion failed:', e); }
+    }
+    
+    S.result = mockupUrl;
+    S.designForPrint = designImage;
+    showGeneratingOverlay(false);
+    showResult();
+  } catch(err) {
+    console.error('Generation error:', err);
+    toast('Error: ' + (err.message || 'Intenta de nuevo'), 'err');
+    showGeneratingOverlay(false);
+  } finally {
+    btn.classList.remove('loading'); btn.disabled = false;
+  }
+}
+
+// Show/hide generating overlay on 3D viewer
+function showGeneratingOverlay(show) {
+  let overlay = document.getElementById('genOverlay');
+  if(show) {
+    if(!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'genOverlay';
+      overlay.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(8,8,8,0.85);z-index:10;border-radius:var(--r);backdrop-filter:blur(4px)';
+      overlay.innerHTML = `
+        <div style="width:40px;height:40px;border:3px solid #ffffff08;border-top-color:var(--lime);border-radius:50%;animation:sp 1s linear infinite;margin-bottom:14px"></div>
+        <div style="font-family:var(--fd);font-size:13px;font-weight:700;color:var(--lime)">Generando muestra</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:4px">(mockup)</div>
+      `;
+      document.getElementById('viewer3d').appendChild(overlay);
+    }
+    overlay.style.display = 'flex';
+  } else {
+    if(overlay) overlay.style.display = 'none';
+  }
+}
+
+// ═══════════════════════════════════
+// ATLAS CLOUD API FUNCTIONS
+// ═══════════════════════════════════
+
+// Step 1a: Transform client photo to art style (I2I)
+async function atlasStyleTransform(photoBase64, stylePrompt) {
+  const pureBase64 = photoBase64.split(',')[1] || photoBase64;
+  const mimeType = photoBase64.match(/data:([^;]+)/)?.[1] || 'image/jpeg';
+  const dataUri = `data:${mimeType};base64,${pureBase64}`;
+
+  const res = await fetch('https://api.atlascloud.ai/api/v1/model/generateImage', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${S.atlasKey}` },
+    body: JSON.stringify({
+      model: 'google/nano-banana-pro/edit',
+      prompt: `Transform this image into ${stylePrompt}. Keep the subject clearly recognizable. Vibrant colors, high detail. Art only, no text, no borders.`,
+      images: [dataUri],
+      output_format: 'png',
+      enable_sync_mode: false
+    })
+  });
+  if(!res.ok) throw new Error(`Style transform failed (${res.status})`);
+  return await extractOrPoll(await res.json());
+}
+
+// Step 1b: Generate design from text description (T2I)
+async function atlasT2I(prompt, stylePrompt) {
+  const activeZone = S.product.zones.find(z => S.selectedZones.includes(z.id));
+  const shape = activeZone?.print?.shape === 'circle' ? 'circular' : 'rectangular';
+  
+  const fullPrompt = `${stylePrompt} artwork. ${prompt}. ${shape} design, fill entire frame, no borders. Dark background, vibrant colors, high detail, print-ready.`;
+
+  const res = await fetch('https://api.atlascloud.ai/api/v1/model/generateImage', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${S.atlasKey}` },
+    body: JSON.stringify({
+      model: 'google/nano-banana-2/text-to-image',
+      prompt: fullPrompt,
+      aspect_ratio: '1:1',
+      output_format: 'png',
+      enable_sync_mode: false
+    })
+  });
+  if(!res.ok) throw new Error(`T2I failed (${res.status})`);
+  return await extractOrPoll(await res.json());
+}
+
+// Step 2: Create product mockup — send product photo + design to Nano Banana 2 Edit
+async function atlasCreateMockup(designImageUrl) {
+  const p = S.product;
+  const zone = S.selectedZones[0];
+  const zoneName = p.zones.find(z => z.id === zone)?.name || zone;
+  const productImgUrl = p.img;
+  
+  console.log('✦ Mockup: fetching product image...', p.mockupImg || p.img);
+  const productB64 = await imageUrlToDataUri(p.mockupImg || p.img);
+  console.log('✦ Mockup: product image ready, length:', productB64.length);
+  
+  let designB64 = designImageUrl;
+  if(designImageUrl.startsWith('http')) {
+    console.log('✦ Mockup: fetching design image...');
+    designB64 = await imageUrlToDataUri(designImageUrl);
+  }
+  console.log('✦ Mockup: design image ready, length:', designB64.length);
+  
+  const zoneInstructions = {
+    'tapa': `en la tapa del producto, solo en la tapa, respetando los margenes`,
+    'tapa_sup': `en la tapa superior del producto, solo en la tapa superior`,
+    'tapa_inf': `en la tapa inferior del producto, solo en la tapa inferior`,
+    'cuerpo': `alrededor del cuerpo del producto, envolviendo el cuerpo`,
+    'bordes': `en los bordes del producto`,
+    'cara_sup': `en la cara superior del producto`,
+    'cara_inf': `en la cara inferior del producto`
+  };
+  
+  const zoneText = zoneInstructions[zone] || `en ${zoneName} del producto`;
+  
+  const prompt = `Desarrollame un mockup con la imagen del producto que te comparto. Inserta la segunda imagen ${zoneText}. Devuelve la imagen del producto terminado con el diseño insertado ${zoneText}. Fondo negro de estudio fotografico para publicidad. Atencion: solo insertar ${zoneText}, no en otras partes.`;
+
+  console.log('✦ Mockup: calling Atlas Cloud nano-banana-2/edit...');
+  console.log('✦ Mockup prompt:', prompt.slice(0, 200));
+
+  const res = await fetch('https://api.atlascloud.ai/api/v1/model/generateImage', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${S.atlasKey}` },
+    body: JSON.stringify({
+      model: 'google/nano-banana-2/edit',
+      prompt: prompt,
+      images: [productB64, designB64],
+      aspect_ratio: '16:9',
+      output_format: 'png',
+      enable_sync_mode: false
+    })
+  });
+  
+  if(!res.ok) {
+    const errBody = await res.text();
+    console.error('✦ Mockup API error:', res.status, errBody);
+    throw new Error(`Mockup failed (${res.status}): ${errBody.slice(0, 200)}`);
+  }
+  
+  const data = await res.json();
+  console.log('✦ Mockup response:', JSON.stringify(data).slice(0, 800));
+  const result = await extractOrPoll(data);
+  console.log('✦ Mockup result URL:', result ? result.slice(0, 100) : 'NULL');
+  return result;
+}
+
+// Helper: convert image URL to data URI
+async function imageUrlToDataUri(url) {
+  if(url.startsWith('data:')) return url;
+  
+  // Try direct fetch first (works for same-origin and CORS-friendly URLs like Supabase)
+  try {
+    const response = await fetch(url);
+    if(response.ok) {
+      const blob = await response.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+    }
+  } catch(e) {
+    console.log('Direct fetch failed, trying img+canvas fallback...');
+  }
+  
+  // Fallback: load via <img> tag + canvas (works even without CORS headers)
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvas.getContext('2d').drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      } catch(e) {
+        // Canvas tainted — last resort: return URL as-is
+        console.warn('Canvas tainted, returning URL as-is');
+        resolve(url);
+      }
+    };
+    img.onerror = () => {
+      console.warn('Img load failed, returning URL as-is');
+      resolve(url);
+    };
+    img.src = url;
+  });
+}
+
+// Atlas Cloud — Image to Image (legacy, kept for compatibility)
+async function atlasI2I(photoBase64, stylePrompt) {
+  return await atlasStyleTransform(photoBase64, stylePrompt);
+}
+
+// Extract image from response, or poll if async
+async function extractOrPoll(data) {
+  // Direct sync results - try all known paths
+  const directUrl = data?.output?.image_url
+    || data?.outputs?.[0]
+    || data?.data?.outputs?.[0]
+    || data?.image_url
+    || data?.output?.url;
+  if(directUrl && directUrl.startsWith('http')) return directUrl;
+
+  const directB64 = data?.output?.image_base64 || data?.image_base64;
+  if(directB64) return `data:image/png;base64,${directB64}`;
+
+  // Async mode - get prediction ID and poll
+  const predId = data?.data?.id || data?.id || data?.task_id || data?.prediction_id;
+  if(predId) {
+    console.log('Polling for prediction:', predId);
+    return await pollAtlasResult(predId);
+  }
+
+  // Last resort: check if outputs is directly an array of URLs at top level
+  if(Array.isArray(data?.outputs) && data.outputs[0]) {
+    return data.outputs[0];
+  }
+
+  console.error('Unknown Atlas response format:', JSON.stringify(data).slice(0, 1000));
+  throw new Error('Formato de respuesta no reconocido');
+}
+
+// Poll for async results
+async function pollAtlasResult(predId) {
+  const pollUrl = `https://api.atlascloud.ai/api/v1/model/prediction/${predId}`;
+  
+  for(let i = 0; i < 60; i++) {
+    await new Promise(r => setTimeout(r, 2000));
+    
+    try {
+      const res = await fetch(pollUrl, {
+        headers: { 'Authorization': `Bearer ${S.atlasKey}` }
+      });
+      if(!res.ok) { console.log(`Poll attempt ${i+1}: HTTP ${res.status}`); continue; }
+      
+      const data = await res.json();
+      const status = data?.data?.status || data?.status;
+      console.log(`Poll ${i+1}: status=${status}`);
+      
+      if(status === 'completed' || status === 'success' || status === 'succeeded') {
+        // Extract image URL from completed result
+        const url = data?.data?.outputs?.[0]
+          || data?.outputs?.[0]
+          || data?.data?.output?.image_url
+          || data?.output?.image_url;
+        if(url) return url;
+        
+        const b64 = data?.data?.output?.image_base64 || data?.output?.image_base64;
+        if(b64) return `data:image/png;base64,${b64}`;
+        
+        console.log('Completed but no image found:', JSON.stringify(data).slice(0, 800));
+        throw new Error('Generación completada pero sin imagen');
+      }
+      
+      if(status === 'failed' || status === 'error') {
+        throw new Error('La generación falló en Atlas Cloud');
+      }
+      // Otherwise status is 'processing' or 'pending', keep polling
+    } catch(err) {
+      if(err.message.includes('falló') || err.message.includes('Completada')) throw err;
+      console.log(`Poll ${i+1} error:`, err.message);
+    }
+  }
+  throw new Error('Tiempo de espera agotado (2 min). Intenta de nuevo.');
+}
+
+// ═══════════════════════════════════
+// PRINT-READY IMAGE GENERATOR
+// ═══════════════════════════════════
+// Crops and resizes the design image to exact print dimensions
+// DPI 300 for print quality: 1mm = ~11.81 pixels at 300dpi
+const PRINT_DPI = 300;
+const MM_TO_PX = PRINT_DPI / 25.4; // 11.81 px per mm
+
+function generatePrintImage(sourceUrl, zone) {
+  return new Promise(async (resolve) => {
+    const print = zone.print;
+    if(!print) { resolve(sourceUrl); return; }
+    
+    const pw = Math.round(print.w_mm * MM_TO_PX); // pixels width
+    const ph = Math.round(print.h_mm * MM_TO_PX); // pixels height
+    
+    try {
+      // Fetch image as blob to avoid CORS (same fix as 3D texture)
+      let imgSrc = sourceUrl;
+      if(sourceUrl.startsWith('http')) {
+        const resp = await fetch(sourceUrl);
+        const blob = await resp.blob();
+        imgSrc = URL.createObjectURL(blob);
+      }
+      
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = pw;
+        canvas.height = ph;
+        const ctx = canvas.getContext('2d');
+        
+        // If circular, clip to circle
+        if(print.shape === 'circle') {
+          ctx.beginPath();
+          ctx.arc(pw/2, ph/2, Math.min(pw,ph)/2, 0, Math.PI * 2);
+          ctx.clip();
+        }
+        
+        // Draw image centered, covering the entire canvas
+        const scale = Math.max(pw / img.width, ph / img.height);
+        const sw = img.width * scale;
+        const sh = img.height * scale;
+        ctx.drawImage(img, (pw - sw) / 2, (ph - sh) / 2, sw, sh);
+        
+        const printDataUrl = canvas.toDataURL('image/png');
+        
+        console.log(`✦ Print image: ${pw}x${ph}px (${print.w_mm}×${print.h_mm}mm @ ${PRINT_DPI}dpi, ${print.shape})`);
+        
+        S.printImage = printDataUrl;
+        S.printDimensions = {w_mm: print.w_mm, h_mm: print.h_mm, w_px: pw, h_px: ph, shape: print.shape, dpi: PRINT_DPI};
+        
+        if(imgSrc !== sourceUrl) URL.revokeObjectURL(imgSrc);
+        resolve(printDataUrl);
+      };
+      img.onerror = () => {
+        if(imgSrc !== sourceUrl) URL.revokeObjectURL(imgSrc);
+        resolve(sourceUrl);
+      };
+      img.src = imgSrc;
+    } catch(e) {
+      console.error('Print image error:', e);
+      resolve(sourceUrl);
+    }
+  });
+}
+
+// ═══════════════════════════════════
+// SHOW RESULT — Design Hero mode
+// ═══════════════════════════════════
+async function showResult() {
+  const panel = document.getElementById('resultPanel');
+  const styleName = STYLES.find(s=>s.id===S.style)?.label?.replace(/[^\w\sáéíóú]/g,'').trim() || S.style;
+  const p = S.product;
+  const zoneNames = S.selectedZones.map(zid => { const z = p.zones.find(z=>z.id===zid); return z ? z.name : zid; }).join(', ');
+  const activeZone = p.zones.find(z => S.selectedZones.includes(z.id));
+
+  // Generate print-ready image
+  const rawDesign = S.designForPrint || S.designRaw || S.result;
+  let printImg = rawDesign;
+  if(activeZone && activeZone.print) {
+    printImg = await generatePrintImage(rawDesign, activeZone);
+  }
+
+  const mockupImg = S.result;
+  const dims = S.printDimensions;
+  const dimsText = dims ? `${dims.w_mm}×${dims.h_mm}mm` : p.printSize;
+  const isCircle = activeZone?.print?.shape === 'circle';
+
+  // Store for download/admin
+  S.lastPrintImg = printImg;
+  S.lastMockupImg = mockupImg;
+
+  // ── 1. Hide 3D viewer, show design hero ──
+  showDesignHero(mockupImg, printImg, dimsText, isCircle, p.name, zoneNames, styleName);
+
+  // ── 2. Result panel below: just actions + summary ──
+  panel.style.display = 'block';
+  panel.innerHTML = `<div class="fadein">
+    <div class="res-label">✦ Tu diseño personalizado</div>
+    <div class="res-title">${p.name} · ${styleName}</div>
+
+    <div style="display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding:4px 0;margin-top:10px">
+      ${PRODUCTS.map(pr => `<img src="${pr.img}" style="height:46px;border-radius:6px;border:2px solid ${pr.id===p.id?'var(--lime)':'transparent'};opacity:${pr.id===p.id?'.9':'.5'};cursor:pointer;flex-shrink:0" crossorigin="anonymous" onclick="selProduct('${pr.id}')" title="${pr.name}">`).join('')}
+    </div>
+
+    <div class="res-actions">
+      <button class="ra ra-retry" onclick="generate()">↻ Otra versión</button>
+      <button class="ra ra-order" id="orderBtn" onclick="submitOrder()">Pedir → ${getTotal()}€</button>
+    </div>
+    <div class="summary">
+      <div class="srow"><span>Producto</span><span>${p.name}</span></div>
+      <div class="srow"><span>Estilo</span><span>${styleName}</span></div>
+      <div class="srow"><span>Zona</span><span>${zoneNames}</span></div>
+      <div class="srow"><span>Medida impresión</span><span>${dimsText}</span></div>
+      <div class="srow"><span>QR en producto</span><span>Incluido ✓</span></div>
+      <div class="srow"><span>Mensaje de voz</span><span>${S.audioBlob ? '✓ Grabado' : 'Sin mensaje'}</span></div>
+      <div class="stotal"><span>Total</span><span>${getTotal()}€</span></div>
+    </div>
+  </div>`;
+
+  // Scroll to design hero smoothly
+  setTimeout(() => {
+    document.getElementById('designHero').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 100);
+}
+
+// ── Show / hide design hero ──
+function showDesignHero(mockupSrc, printSrc, dimsText, isCircle, productName, zones, styleName) {
+  // Hide 3D
+  document.getElementById('viewer3d').classList.add('hidden');
+  document.getElementById('viewerLabel').classList.add('hidden');
+
+  // Populate hero
+  const hero = document.getElementById('designHero');
+  const heroImg = document.getElementById('mockupHeroImg');
+  const heroLabel = document.getElementById('mockupHeroLabel');
+  const miniImg = document.getElementById('printMiniImg');
+  const miniDims = document.getElementById('printMiniDims');
+
+  heroImg.src = mockupSrc;
+  heroLabel.textContent = `✦ ${productName} · ${styleName}`;
+
+  miniImg.src = printSrc;
+  miniImg.className = 'print-mini-img' + (isCircle ? ' circle' : '');
+  miniDims.textContent = dimsText;
+
+  hero.classList.add('show');
+}
+
+function hideDesignHero() {
+  const hero = document.getElementById('designHero');
+  hero.classList.remove('show');
+  hero.style.display = 'none';
+  hero.style.display = '';
+  document.getElementById('viewer3d').classList.remove('hidden');
+  document.getElementById('viewerLabel').classList.remove('hidden');
+}
+
+// ── Parallax mouse effect ──
+function handleMockupMove(e) {
+  const stage = document.getElementById('mockupStage');
+  const parallax = document.getElementById('mockupParallax');
+  const glow = document.getElementById('mockupGlow');
+  const cursor = document.getElementById('mockupCursor');
+  const rect = stage.getBoundingClientRect();
+
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const cx = rect.width / 2;
+  const cy = rect.height / 2;
+
+  // Parallax — max 12px shift
+  const maxShift = 12;
+  const dx = ((x - cx) / cx) * maxShift;
+  const dy = ((y - cy) / cy) * maxShift;
+  parallax.style.transform = `translate(${dx}px, ${dy}px)`;
+
+  // Glow follows cursor
+  const pctX = (x / rect.width) * 100;
+  const pctY = (y / rect.height) * 100;
+  glow.style.background = `radial-gradient(ellipse at ${pctX}% ${pctY}%, rgba(232,255,71,.12) 0%, transparent 55%)`;
+
+  // Custom cursor
+  cursor.style.left = x + 'px';
+  cursor.style.top = y + 'px';
+}
+
+function handleMockupLeave() {
+  const parallax = document.getElementById('mockupParallax');
+  const glow = document.getElementById('mockupGlow');
+  parallax.style.transform = 'translate(0,0)';
+  glow.style.background = 'radial-gradient(ellipse at 50% 50%, rgba(232,255,71,.06) 0%, transparent 55%)';
+}
+
+function openLightboxFromHero() {
+  if(S.lastMockupImg) openLightbox(S.lastMockupImg, 'Mockup · ' + S.product.name);
+}
+
+function openLightboxPrint() {
+  if(S.lastPrintImg) openLightbox(S.lastPrintImg, 'Diseño impresión · ' + (S.printDimensions ? `${S.printDimensions.w_mm}×${S.printDimensions.h_mm}mm` : S.product.printSize));
+}
+
+function downloadPrintImage() {
+  if(!S.lastPrintImg) return;
+  const a = document.createElement('a');
+  a.href = S.lastPrintImg;
+  a.download = `vivogift-impresion-${S.product.id}-${Date.now()}.png`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+// ═══════════════════════════════════
+// SUBMIT ORDER TO SUPABASE
+// ═══════════════════════════════════
+async function submitOrder() {
+  const btn = document.getElementById('orderBtn');
+  if(!btn) return;
+  btn.textContent = 'Procesando...';
+  btn.style.opacity = '.6';
+  btn.disabled = true;
+  
+  try {
+    // Upload audio if exists
+    let audioFileUrl = null;
+    const orderId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
+    
+    if(S.audioBlob && !document.getElementById('skipAudio')?.checked) {
+      audioFileUrl = await uploadAudio(S.audioBlob, orderId);
+    }
+    
+    // Build order data
+    const orderData = {
+      id: orderId,
+      product: S.product.name,
+      style: S.style,
+      design_url: S.result || null,
+      print_image: S.printImage || null,
+      print_dimensions: S.printDimensions || null,
+      audio_url: audioFileUrl,
+      extras: {
+        qr_product: true,
+        qr_box: !!document.querySelector('.tog.on[data-price="3"]'),
+        sound_module: !!document.querySelector('.tog.on[data-price="15"]'),
+        custom_box: !!document.querySelector('.tog.on[data-price="5"]'),
+        zones: S.selectedZones
+      },
+      total: getTotal(),
+      status: 'pending'
+    };
+    
+    // Save to Supabase
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON,
+        'Authorization': `Bearer ${SUPABASE_ANON}`,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(orderData)
+    });
+    
+    if(res.ok) {
+      toast('¡Pedido registrado! Te contactamos pronto 🎉', 'ok');
+      btn.textContent = '✓ Pedido enviado';
+      btn.style.background = '#4ade80';
+      btn.style.borderColor = '#4ade80';
+      console.log('Order saved:', orderId);
+    } else {
+      const err = await res.text();
+      console.error('Order save error:', err);
+      toast('Error al guardar. Inténtalo de nuevo.', 'err');
+      btn.textContent = `Pedir → ${getTotal()}€`;
+      btn.style.opacity = '1';
+      btn.disabled = false;
+    }
+  } catch(err) {
+    console.error('Order error:', err);
+    toast('Error de conexión. Inténtalo de nuevo.', 'err');
+    btn.textContent = `Pedir → ${getTotal()}€`;
+    btn.style.opacity = '1';
+    btn.disabled = false;
+  }
+}
+
+// ═══════════════════════════════════
+// AUDIO RECORDER
+// ═══════════════════════════════════
+let mediaRecorder = null;
+let audioChunks = [];
+let audioBlob = null;
+let audioUrl = null;
+let audioElement = null;
+let recInterval = null;
+let recSeconds = 0;
+const MAX_REC = 30;
+
+async function toggleRecording() {
+  if(mediaRecorder && mediaRecorder.state === 'recording') {
+    stopRecording();
+  } else {
+    await startRecording();
+  }
+}
+
+async function startRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    
+    mediaRecorder.ondataavailable = e => { if(e.data.size > 0) audioChunks.push(e.data); };
+    
+    mediaRecorder.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+      audioUrl = URL.createObjectURL(audioBlob);
+      audioElement = new Audio(audioUrl);
+      S.audioBlob = audioBlob;
+      
+      // Uncheck skip
+      document.getElementById('skipAudio').checked = false;
+      
+      // Show preview
+      const preview = document.getElementById('audioPreview');
+      preview.style.display = 'block';
+      document.getElementById('audioDuration').textContent = recSeconds + 's';
+      
+      // Reset button
+      const btn = document.getElementById('recBtn');
+      btn.style.borderColor = '#ff4444';
+      btn.style.color = '#ff4444';
+      document.getElementById('recDot').style.background = '#ff4444';
+      document.getElementById('recDot').style.animation = '';
+      document.getElementById('recText').textContent = 'Grabar de nuevo';
+      document.getElementById('recTimer').style.display = 'none';
+    };
+    
+    mediaRecorder.start();
+    recSeconds = 0;
+    
+    // Update UI
+    const btn = document.getElementById('recBtn');
+    btn.style.borderColor = '#ff4444';
+    btn.style.color = '#fff';
+    btn.style.background = '#ff4444';
+    document.getElementById('recDot').style.background = '#fff';
+    document.getElementById('recDot').style.animation = 'pu 1s infinite';
+    document.getElementById('recText').textContent = 'Parar';
+    document.getElementById('recTimer').style.display = '';
+    
+    // Timer
+    recInterval = setInterval(() => {
+      recSeconds++;
+      const m = String(Math.floor(recSeconds / 60)).padStart(2, '0');
+      const s = String(recSeconds % 60).padStart(2, '0');
+      document.getElementById('recTimer').textContent = `${m}:${s} / 00:${MAX_REC}`;
+      
+      // Auto-stop at max
+      if(recSeconds >= MAX_REC) stopRecording();
+    }, 1000);
+    
+  } catch(err) {
+    console.error('Mic error:', err);
+    toast('No se pudo acceder al micrófono. Revisa los permisos.', 'err');
+  }
+}
+
+function stopRecording() {
+  if(recInterval) { clearInterval(recInterval); recInterval = null; }
+  if(mediaRecorder && mediaRecorder.state === 'recording') {
+    mediaRecorder.stop();
+  }
+  // Reset button style
+  const btn = document.getElementById('recBtn');
+  btn.style.background = 'transparent';
+}
+
+function playRecording() {
+  if(!audioElement) return;
+  const playBtn = document.getElementById('playBtn');
+  if(!playBtn) return;
+  
+  if(audioElement.paused) {
+    audioElement.currentTime = 0;
+    audioElement.play().catch(e => console.log('Play error:', e));
+    playBtn.innerHTML = '⏸';
+    
+    // Progress bar
+    const progressUpdate = setInterval(() => {
+      if(!audioElement || audioElement.paused) {
+        clearInterval(progressUpdate);
+        if(playBtn) playBtn.innerHTML = '▶';
+        const wp = document.getElementById('waveProgress');
+        if(wp) wp.style.width = '0%';
+        return;
+      }
+      const pct = audioElement.duration ? (audioElement.currentTime / audioElement.duration) * 100 : 0;
+      const wp = document.getElementById('waveProgress');
+      if(wp) wp.style.width = pct + '%';
+    }, 100);
+    
+    audioElement.onended = () => {
+      if(playBtn) playBtn.innerHTML = '▶';
+      const wp = document.getElementById('waveProgress');
+      if(wp) wp.style.width = '0%';
+    };
+  } else {
+    audioElement.pause();
+    playBtn.innerHTML = '▶';
+  }
+}
+
+function deleteRecording() {
+  audioBlob = null;
+  audioUrl = null;
+  audioElement = null;
+  S.audioBlob = null;
+  document.getElementById('audioPreview').style.display = 'none';
+  document.getElementById('recText').textContent = 'Grabar mensaje';
+  document.getElementById('skipAudio').checked = true;
+}
+
+// Upload audio to Supabase Storage
+async function uploadAudio(blob, orderId) {
+  const filename = `audio/${orderId}.webm`;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/assets/${filename}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON,
+        'Authorization': `Bearer ${SUPABASE_ANON}`,
+        'Content-Type': 'audio/webm',
+        'x-upsert': 'true'
+      },
+      body: blob
+    });
+    if(res.ok) return `${SUPABASE_STORAGE}/${filename}`;
+  } catch(e) { console.error('Audio upload error:', e); }
+  return null;
+}
+
+// ═══════════════════════════════════
+// CHATBOT — GEMINI AI
+// ═══════════════════════════════════
+function toggleChat() { document.getElementById('chatWin').classList.toggle('open'); }
+
+const CHAT_CONTEXT = `Eres el asistente de VIVOgift, una tienda de regalos personalizados únicos. 
+Productos: Cenicero LED coche (20€), Mechero custom (14€), Grinder de madera natural (22€), Posavasos (18€).
+Cada producto incluye un QR que al escanearlo reproduce un mensaje de voz o muestra una imagen especial.
+Extras opcionales: QR en caja (+3€), Voz integrada en la caja que suena al abrirla (+15€), Caja personalizada (+5€).
+Producción artesanal, envío 24-48h.
+El cliente puede subir una foto y la transformamos en una obra de arte en distintos estilos (anime, cómic, acuarela, etc.) que se imprime en el producto.
+NUNCA menciones inteligencia artificial, IA, AI, machine learning ni nada técnico. Todo es "magia VIVOgift" o "nuestro equipo creativo".
+Responde breve, cálido, en español, con un toque Gen Z/Millennial. Usa emojis con moderación.`;
+
+async function chatQuick(btn) {
+  const q = btn.textContent;
+  addChatMsg(q, 'usr');
+  await geminiChat(q);
+}
+
+async function sendChat() {
+  const inp = document.getElementById('chatIn');
+  const q = inp.value.trim();
+  if(!q) return;
+  inp.value = '';
+  addChatMsg(q, 'usr');
+  await geminiChat(q);
+}
+
+function addChatMsg(text, type) {
+  const bd = document.getElementById('chatBd');
+  bd.innerHTML += `<div class="cm ${type}">${text}</div>`;
+  bd.scrollTop = bd.scrollHeight;
+}
+
+async function geminiChat(question) {
+  if(!S.geminiKey) {
+    // Fallback predefined answers
+    const answers = {
+      '¿Cómo funciona?': '¡Es súper fácil! 🎨\n\n1. Elige tu producto\n2. Sube tu foto o describe tu idea\n3. Elige el estilo\n4. Nosotros creamos la magia\n5. Recibes tu regalo único en 24-48h',
+      '¿Qué es el QR?': 'Cada producto lleva un QR mágico 🔮 Al escanearlo con tu móvil puedes escuchar un mensaje de voz o ver una imagen especial. Es como un regalo dentro del regalo.',
+      '¿Cuánto tarda?': 'Producción: 24h ⚡\nEnvío: 24-48h 📦\nTotal: 2-4 días en tu puerta.',
+      'Precios': '🚬 Cenicero LED: desde 20€\n🔥 Mechero: desde 14€\n🌿 Grinder: desde 22€\n🖤 Posavasos: desde 18€\n\nTodos incluyen QR personalizado.'
+    };
+    const a = answers[question] || 'Escríbenos a hola@vivogift.store y te respondemos enseguida 💚';
+    setTimeout(() => addChatMsg(a.replace(/\n/g,'<br>'), 'bot'), 300);
+    return;
+  }
+
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${S.geminiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: `${CHAT_CONTEXT}\n\nCliente pregunta: "${question}"\n\nResponde brevemente:` }] }],
+        generationConfig: { maxOutputTokens: 200, temperature: 0.7 }
+      })
+    });
+
+    if(!res.ok) throw new Error('Gemini failed');
+    const data = await res.json();
+    const answer = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Escríbenos a hola@vivogift.store 💚';
+    addChatMsg(answer.replace(/\n/g,'<br>'), 'bot');
+  } catch(err) {
+    console.error('Gemini chat error:', err);
+    addChatMsg('Perdona, no pude responder ahora. Escríbenos a hola@vivogift.store 💚', 'bot');
+  }
+}
+
+// Keys are loaded from Supabase - no manual input needed
+
+// ═══════════════════════════════════
+// TOAST
+// ═══════════════════════════════════
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type||'ok');
+  setTimeout(() => t.className='toast', 3500);
+}
+
+// ═══════════════════════════════════
+// LIGHTBOX / ZOOM
+// ═══════════════════════════════════
+let lbCurrentSrc = null;
+
+function openLightbox(src, label) {
+  lbCurrentSrc = src;
+  const lb = document.getElementById('lightbox');
+  const img = document.getElementById('lbImg');
+  const tag = document.getElementById('lbTag');
+  img.src = src;
+  tag.textContent = label || '';
+  lb.classList.add('open');
+}
+
+function closeLightbox(e) {
+  if(e.target === document.getElementById('lightbox') || e.target.classList.contains('lb-close')) {
+    document.getElementById('lightbox').classList.remove('open');
+  }
+}
+
+function downloadLbImage() {
+  if(!lbCurrentSrc) return;
+  const a = document.createElement('a');
+  a.href = lbCurrentSrc;
+  a.download = 'vivogift-diseno-' + Date.now() + '.png';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+document.addEventListener('keydown', e => { if(e.key === 'Escape') document.getElementById('lightbox').classList.remove('open'); });
+
+// ═══════════════════════════════════
+// ADMIN PANEL
+// ═══════════════════════════════════
+const ADMIN_PASSWORD = 'vivogift2024'; // Cambia esto en producción
+let adminLoggedIn = false;
+let allOrders = [];
+let currentFilter = 'all';
+
+function openAdmin() {
+  document.getElementById('adminOverlay').classList.add('open');
+  if(adminLoggedIn) loadOrders();
+}
+
+function closeAdmin() {
+  document.getElementById('adminOverlay').classList.remove('open');
+}
+
+function closeAdminOverlay(e) {
+  if(e.target === document.getElementById('adminOverlay')) closeAdmin();
+}
+
+function checkAdminPass() {
+  const pass = document.getElementById('adminPass').value;
+  if(pass === ADMIN_PASSWORD) {
+    adminLoggedIn = true;
+    document.getElementById('adminLogin').style.display = 'none';
+    document.getElementById('adminDash').style.display = 'block';
+    document.getElementById('adminUser').textContent = '✓ Admin';
+    loadOrders();
+  } else {
+    document.getElementById('adminPass').style.borderColor = '#ff4444';
+    document.getElementById('adminPass').value = '';
+    document.getElementById('adminPass').placeholder = 'Contraseña incorrecta';
+    setTimeout(() => {
+      document.getElementById('adminPass').style.borderColor = '';
+      document.getElementById('adminPass').placeholder = 'Contraseña';
+    }, 1500);
+  }
+}
+
+async function loadOrders() {
+  const list = document.getElementById('ordersList');
+  list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">Cargando pedidos...</div>';
+  
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/orders?order=created_at.desc&limit=50`, {
+      headers: {
+        'apikey': SUPABASE_ANON,
+        'Authorization': `Bearer ${SUPABASE_ANON}`
+      }
+    });
+    
+    if(!res.ok) throw new Error('Error cargando pedidos');
+    allOrders = await res.json();
+    
+    // Stats
+    const pending = allOrders.filter(o => o.status === 'pending').length;
+    const paid = allOrders.filter(o => o.status === 'paid').length;
+    const revenue = allOrders.filter(o => o.status === 'paid').reduce((s,o) => s + (o.total||0), 0);
+    
+    document.getElementById('statTotal').textContent = allOrders.length;
+    document.getElementById('statPending').textContent = pending;
+    document.getElementById('statRevenue').textContent = revenue.toFixed(0) + '€';
+    
+    renderOrders(currentFilter);
+  } catch(err) {
+    list.innerHTML = `<div style="text-align:center;padding:20px;color:#ff6666;font-size:12px">Error: ${err.message}</div>`;
+  }
+}
+
+function filterOrders(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.af').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  renderOrders(filter);
+}
+
+function renderOrders(filter) {
+  const list = document.getElementById('ordersList');
+  const filtered = filter === 'all' ? allOrders : allOrders.filter(o => o.status === filter);
+  
+  if(filtered.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);font-size:12px">No hay pedidos' + (filter !== 'all' ? ` ${filter === 'paid' ? 'pagados' : 'pendientes'}` : '') + '</div>';
+    return;
+  }
+  
+  list.innerHTML = filtered.map(order => {
+    const date = new Date(order.created_at).toLocaleDateString('es-ES', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const isPaid = order.status === 'paid';
+    const shortId = (order.id || '').substring(0, 8).toUpperCase();
+    const extras = order.extras || {};
+    const extrasText = [
+      extras.qr_product && 'QR producto',
+      extras.qr_box && 'QR caja (+3€)',
+      extras.sound_module && 'Módulo voz (+15€)',
+      extras.custom_box && 'Caja custom (+5€)',
+    ].filter(Boolean).join(', ') || 'Solo producto';
+    
+    return `<div class="order-card" id="order-${order.id}">
+      <div class="order-head">
+        <span class="order-id">#${shortId}</span>
+        <span class="badge-status ${order.status || 'pending'}">${isPaid ? 'Pagado' : 'Pendiente'}</span>
+      </div>
+      ${order.design_url || order.print_image ? `
+      <div class="order-imgs">
+        ${order.print_image ? `<img class="order-thumb" src="${order.print_image}" title="Diseño impresión" onclick="openLightbox('${order.print_image}','Impresión #${shortId}')">` : ''}
+        ${order.design_url ? `<img class="order-thumb" src="${order.design_url}" title="Mockup" onclick="openLightbox('${order.design_url}','Mockup #${shortId}')">` : ''}
+      </div>` : ''}
+      <div class="order-info">
+        <b>${order.product || '—'}</b> · ${order.style || 'original'}<br>
+        Zona: ${(order.extras?.zones || []).join(', ') || '—'} · <b style="color:var(--lime)">${order.total || 0}€</b><br>
+        Extras: ${extrasText}<br>
+        ${order.audio_url ? `🎙 Audio: <a href="${order.audio_url}" target="_blank" style="color:var(--lime);font-size:10px">escuchar</a><br>` : ''}
+        <span style="color:var(--text3);font-size:10px">${date}</span>
+      </div>
+      <div class="order-actions">
+        ${order.print_image ? `<button class="oa oa-dl" onclick="downloadOrderImage('${order.print_image}','impresion-${shortId}')">⬇ Descargar impresión</button>` : ''}
+        ${order.design_url ? `<button class="oa oa-view" onclick="openLightbox('${order.design_url}','Mockup ${shortId}')">👁 Ver mockup</button>` : ''}
+        ${!isPaid ? `<button class="oa oa-paid" onclick="markAsPaid('${order.id}')">✓ Marcar pagado</button>` : ''}
+        <button class="oa oa-del" onclick="deleteOrder('${order.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function downloadOrderImage(src, filename) {
+  const a = document.createElement('a');
+  a.href = src;
+  a.download = `vivogift-${filename}-${Date.now()}.png`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+async function markAsPaid(orderId) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': SUPABASE_ANON,
+        'Authorization': `Bearer ${SUPABASE_ANON}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({ status: 'paid' })
+    });
+    if(res.ok) {
+      const order = allOrders.find(o => o.id === orderId);
+      if(order) order.status = 'paid';
+      renderOrders(currentFilter);
+      toast('✓ Pedido marcado como pagado', 'ok');
+      // Update stats
+      const paid = allOrders.filter(o => o.status === 'paid').length;
+      const pending = allOrders.filter(o => o.status === 'pending').length;
+      const revenue = allOrders.filter(o => o.status === 'paid').reduce((s,o) => s + (o.total||0), 0);
+      document.getElementById('statPending').textContent = pending;
+      document.getElementById('statRevenue').textContent = revenue.toFixed(0) + '€';
+    }
+  } catch(err) { toast('Error al actualizar', 'err'); }
+}
+
+async function deleteOrder(orderId) {
+  if(!confirm('¿Eliminar este pedido?')) return;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}`, {
+      method: 'DELETE',
+      headers: {
+        'apikey': SUPABASE_ANON,
+        'Authorization': `Bearer ${SUPABASE_ANON}`
+      }
+    });
+    if(res.ok) {
+      allOrders = allOrders.filter(o => o.id !== orderId);
+      renderOrders(currentFilter);
+      document.getElementById('statTotal').textContent = allOrders.length;
+      toast('Pedido eliminado', 'ok');
+    }
+  } catch(err) { toast('Error al eliminar', 'err'); }
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
