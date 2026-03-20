@@ -1153,18 +1153,18 @@ async function showResult() {
   const zoneNames = S.selectedZones.map(zid => { const z = p.zones.find(z=>z.id===zid); return z ? z.name : zid; }).join(', ');
   const activeZone = p.zones.find(z => S.selectedZones.includes(z.id));
   
-  // Generate print-ready image from raw design (not mockup)
-  const rawDesign = S.designForPrint || S.result;
+  // Raw design for printing (before mockup)
+  const rawDesign = S.designForPrint || S.designRaw || S.result;
   let printImg = rawDesign;
   if(activeZone && activeZone.print) {
     printImg = await generatePrintImage(rawDesign, activeZone);
   }
   
-  // The mockup IS the result from Atlas Cloud (product + design combined)
+  // Mockup = the result from Atlas Cloud (product + design combined)
   const mockupImg = S.result;
   
-  // Apply raw design to 3D viewer
-  applyDesignTo3D(rawDesign);
+  // DO NOT apply to 3D — leave 3D clean showing just the product
+  // applyDesignTo3D is NOT called
   
   const dims = S.printDimensions;
   const dimsText = dims ? `${dims.w_mm}×${dims.h_mm}mm` : p.printSize;
@@ -1175,13 +1175,7 @@ async function showResult() {
     <div class="res-label">✦ Tu diseño personalizado</div>
     <div class="res-title">${p.name} · ${styleName}</div>
     
-    <!-- Mockup result - the main visual -->
-    <div style="margin-bottom:16px;border-radius:var(--r);overflow:hidden;position:relative">
-      <img src="${mockupImg}" style="width:100%;display:block;border-radius:var(--r)" crossorigin="anonymous">
-      <div style="position:absolute;bottom:8px;left:8px;background:#000a;padding:4px 10px;border-radius:6px;font-size:10px;color:var(--lime)">Mockup · ${zoneNames}</div>
-    </div>
-    
-    <!-- Print-ready design + product photo side by side -->
+    <!-- Two panels: Print design + Atlas Mockup -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div>
         <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-family:var(--fd);font-weight:700">Diseño para imprimir</div>
@@ -1191,9 +1185,9 @@ async function showResult() {
         </div>
       </div>
       <div>
-        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-family:var(--fd);font-weight:700">Producto</div>
+        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-family:var(--fd);font-weight:700">Mockup · ${zoneNames}</div>
         <div style="border-radius:var(--r);overflow:hidden;background:var(--bg);aspect-ratio:1/1;display:flex;align-items:center;justify-content:center">
-          <img src="${p.img}" style="max-width:100%;max-height:100%;object-fit:contain" crossorigin="anonymous">
+          <img src="${mockupImg}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:var(--r)" crossorigin="anonymous">
         </div>
       </div>
     </div>
