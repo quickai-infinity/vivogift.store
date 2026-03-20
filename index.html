@@ -859,52 +859,81 @@ async function generate() {
 
   const btn = document.getElementById('btnGo');
   btn.classList.add('loading'); btn.disabled = true;
+  
+  // Show generating overlay on 3D viewer
+  showGeneratingOverlay(true);
 
   try {
-    let designImage; // The client's design (photo or AI-generated)
+    let designImage;
     
     if(S.flow === 'photo' && S.photo) {
       if(S.style === 'original') {
-        designImage = S.photo; // Use photo as-is
+        designImage = S.photo;
       } else {
-        // Step 1: Transform photo to style first
         toast('Transformando tu foto...','ok');
         designImage = await atlasStyleTransform(S.photo, STYLE_PROMPTS[S.style]);
       }
     } else {
-      // Step 1: Generate design from text
+      // TEXT flow: generate image from description
       toast('Generando diseño...','ok');
       designImage = await atlasT2I(S.prompt, STYLE_PROMPTS[S.style] || 'high quality digital art');
     }
     
-    // Store the raw design for print
+    // CRITICAL: Convert Atlas URL to base64 dataURI BEFORE sending to mockup
+    // Atlas URLs have CORS restrictions — they work in <img> but NOT in fetch from other domains
+    if(designImage && designImage.startsWith('http')) {
+      console.log('✦ Converting design URL to dataURI for mockup...');
+      designImage = await imageUrlToDataUri(designImage);
+      console.log('✦ Design converted, length:', designImage.length);
+    }
+    
     S.designRaw = designImage;
     
     // Step 2: Create mockup — insert design into product photo
-    toast('Creando mockup del producto...','ok');
+    toast('Generando muestra (mockup)...','ok');
     let mockupUrl = await atlasCreateMockup(designImage);
     
-    // Atlas URLs work directly in <img> tags — no need for blob conversion
-    // Also convert design URL if needed for print image generation
-    if(designImage && designImage.startsWith('http')) {
+    // Convert mockup URL to blob for display (CORS)
+    if(mockupUrl && mockupUrl.startsWith('http')) {
       try {
-        const resp = await fetch(designImage);
+        const resp = await fetch(mockupUrl);
         const blob = await resp.blob();
-        designImage = URL.createObjectURL(blob);
-        S.designRaw = designImage;
-      } catch(e) { console.warn('Design blob conversion skipped:', e); }
+        mockupUrl = URL.createObjectURL(blob);
+      } catch(e) { console.warn('Mockup blob conversion failed:', e); }
     }
     
     S.result = mockupUrl;
-    S.designForPrint = designImage; // Keep raw design for print file
+    S.designForPrint = designImage;
+    showGeneratingOverlay(false);
     showResult();
   } catch(err) {
     console.error('Generation error:', err);
     toast('Error: ' + (err.message || 'Intenta de nuevo'), 'err');
+    showGeneratingOverlay(false);
   } finally {
     btn.classList.remove('loading'); btn.disabled = false;
   }
 }
+
+// Show/hide generating overlay on 3D viewer
+function showGeneratingOverlay(show) {
+  let overlay = document.getElementById('genOverlay');
+  if(show) {
+    if(!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'genOverlay';
+      overlay.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(8,8,8,0.85);z-index:10;border-radius:var(--r);backdrop-filter:blur(4px)';
+      overlay.innerHTML = `
+        <div style="width:40px;height:40px;border:3px solid #ffffff08;border-top-color:var(--lime);border-radius:50%;animation:sp 1s linear infinite;margin-bottom:14px"></div>
+        <div style="font-family:var(--fd);font-size:13px;font-weight:700;color:var(--lime)">Generando muestra</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:4px">(mockup)</div>
+      `;
+      document.getElementById('viewer3d').appendChild(overlay);
+    }
+    overlay.style.display = 'flex';
+  } else {
+    if(overlay) overlay.style.display = 'none';
+  }
 
 // ═══════════════════════════════════
 // ATLAS CLOUD API FUNCTIONS
@@ -1017,12 +1046,44 @@ async function atlasCreateMockup(designImageUrl) {
 // Helper: convert image URL to data URI
 async function imageUrlToDataUri(url) {
   if(url.startsWith('data:')) return url;
-  const response = await fetch(url);
-  const blob = await response.blob();
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result);
-    reader.readAsDataURL(blob);
+  
+  // Try direct fetch first (works for same-origin and CORS-friendly URLs like Supabase)
+  try {
+    const response = await fetch(url);
+    if(response.ok) {
+      const blob = await response.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+    }
+  } catch(e) {
+    console.log('Direct fetch failed, trying img+canvas fallback...');
+  }
+  
+  // Fallback: load via <img> tag + canvas (works even without CORS headers)
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvas.getContext('2d').drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      } catch(e) {
+        // Canvas tainted — last resort: return URL as-is
+        console.warn('Canvas tainted, returning URL as-is');
+        resolve(url);
+      }
+    };
+    img.onerror = () => {
+      console.warn('Img load failed, returning URL as-is');
+      resolve(url);
+    };
+    img.src = url;
   });
 }
 
