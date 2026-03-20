@@ -236,6 +236,18 @@ button{font-family:var(--fb);cursor:pointer}
     <div class="step-label" id="zoneStep">Paso 4</div>
     <div class="step-title">¿Dónde va el diseño?</div>
     <div class="zones" id="zonesContainer"></div>
+    <button id="btnMedidas" onclick="showMedidas()" style="margin-top:10px;padding:7px 14px;border-radius:var(--rs);border:1.5px solid #ffffff12;background:transparent;color:var(--text2);font-size:10px;font-weight:600;display:flex;align-items:center;gap:5px;transition:.2s;cursor:pointer">📐 Ver medidas del producto</button>
+  </div>
+
+  <!-- MEDIDAS MODAL -->
+  <div class="modal-ov" id="medidasModal" onclick="if(event.target===this)this.classList.remove('show')">
+    <div class="modal" style="max-width:500px">
+      <button class="modal-x" onclick="document.getElementById('medidasModal').classList.remove('show')">×</button>
+      <h3 id="medidasTitle">Medidas</h3>
+      <div style="margin-top:12px;text-align:center">
+        <img id="medidasImg" src="" style="max-width:100%;border-radius:var(--r)">
+      </div>
+    </div>
   </div>
 
   <!-- EXTRAS -->
@@ -350,10 +362,12 @@ const PRODUCTS = [
     price: 20,
     badge: 'NEW',
     img: SUPABASE_STORAGE + '/1-front.png',
+    mockupImg: SUPABASE_STORAGE + '/mockup-image-led-cenicero.png',
+    medidasImg: SUPABASE_STORAGE + '/medidas-cenicero-led.png',
     glb: SUPABASE_STORAGE + '/cenicero.glb',
     zones: [
       {id:'tapa',name:'Tapa',icon:'⬆',default:true, print:{w_mm:50,h_mm:50,shape:'circle'}},
-      {id:'bordes',name:'Bordes',icon:'◯', print:{w_mm:157,h_mm:30,shape:'rect'}} // circumference x height
+      {id:'bordes',name:'Bordes',icon:'◯', print:{w_mm:157,h_mm:30,shape:'rect'}}
     ],
     promptCtx: 'circular design for the lid of a portable car ashtray',
     printSize: 'Ø 5cm (tapa)',
@@ -364,6 +378,8 @@ const PRODUCTS = [
     name: 'Mechero Custom',
     price: 14,
     img: SUPABASE_STORAGE + '/1-metal.png',
+    mockupImg: SUPABASE_STORAGE + '/mockup-mechero.png',
+    medidasImg: SUPABASE_STORAGE + '/medidas-mechero.png',
     glb: SUPABASE_STORAGE + '/mechero.glb',
     zones: [
       {id:'cuerpo',name:'Cuerpo',icon:'▮',default:true, print:{w_mm:25,h_mm:78.5,shape:'rect'}}
@@ -377,6 +393,8 @@ const PRODUCTS = [
     name: 'Grinder Natural',
     price: 22,
     img: SUPABASE_STORAGE + '/1-madera%20(1).png',
+    mockupImg: SUPABASE_STORAGE + '/mockup-grinder-wood.png',
+    medidasImg: SUPABASE_STORAGE + '/medidas-grinder.png',
     glb: SUPABASE_STORAGE + '/grinder.glb',
     zones: [
       {id:'tapa_sup',name:'Tapa superior',icon:'⬆',default:true, print:{w_mm:55,h_mm:55,shape:'circle'}},
@@ -392,6 +410,8 @@ const PRODUCTS = [
     name: 'Posavasos',
     price: 18,
     img: SUPABASE_STORAGE + '/1-1-black.png',
+    mockupImg: SUPABASE_STORAGE + '/mockup-portavasos.png',
+    medidasImg: SUPABASE_STORAGE + '/medidas-portavasos.png',
     glb: SUPABASE_STORAGE + '/portavaso.glb',
     zones: [
       {id:'cara_sup',name:'Cara superior',icon:'⬆',default:true, print:{w_mm:80,h_mm:80,shape:'circle'}},
@@ -406,6 +426,8 @@ const PRODUCTS = [
     name: 'Cenicero Home',
     price: 25,
     img: SUPABASE_STORAGE + '/3-home-ceni.png',
+    mockupImg: SUPABASE_STORAGE + '/mockup-image-cenicero-home.png',
+    medidasImg: SUPABASE_STORAGE + '/medidas-cenicero-home.png',
     glb: SUPABASE_STORAGE + '/cenicero-home.glb',
     zones: [
       {id:'tapa',name:'Tapa',icon:'⬆',default:true, print:{w_mm:92,h_mm:92,shape:'circle'}}
@@ -593,25 +615,6 @@ function initThreeJS() {
   }
   animate();
   
-  // DEBUG: Arrow keys to adjust sticker position
-  // Up/Down = Y, Left/Right = Z, +/- = size, R/F = rotation X
-  document.addEventListener('keydown', (e) => {
-    if(!currentDecal) return;
-    const step = 0.05;
-    if(e.key === 'ArrowUp') currentDecal.position.y += step;
-    if(e.key === 'ArrowDown') currentDecal.position.y -= step;
-    if(e.key === 'ArrowLeft') currentDecal.position.z -= step;
-    if(e.key === 'ArrowRight') currentDecal.position.z += step;
-    if(e.key === '+' || e.key === '=') currentDecal.scale.multiplyScalar(1.1);
-    if(e.key === '-') currentDecal.scale.multiplyScalar(0.9);
-    if(e.key === 'r') currentDecal.rotation.x += 0.05;
-    if(e.key === 'f') currentDecal.rotation.x -= 0.05;
-    if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','+','=','-','r','f'].includes(e.key)) {
-      console.log(`📌 Sticker pos(${currentDecal.position.x.toFixed(3)},${currentDecal.position.y.toFixed(3)},${currentDecal.position.z.toFixed(3)}) rot(${currentDecal.rotation.x.toFixed(3)}) scale(${currentDecal.scale.x.toFixed(3)})`);
-      e.preventDefault();
-    }
-  });
-  
   // Load first product
   load3DModel(S.product.glb);
 }
@@ -785,6 +788,14 @@ function renderStyles() {
 
 function selStyle(id) { S.style = id; renderStyles(); }
 
+function showMedidas() {
+  const p = S.product;
+  if(!p.medidasImg) { toast('Medidas no disponibles','err'); return; }
+  document.getElementById('medidasTitle').textContent = `📐 ${p.name} — Medidas reales`;
+  document.getElementById('medidasImg').src = p.medidasImg;
+  document.getElementById('medidasModal').classList.add('show');
+}
+
 function setFlow(f) {
   S.flow = f;
   document.querySelectorAll('.flow-tab').forEach(t => t.classList.toggle('on', t.dataset.flow===f));
@@ -871,7 +882,24 @@ async function generate() {
     
     // Step 2: Create mockup — insert design into product photo
     toast('Creando mockup del producto...','ok');
-    const mockupUrl = await atlasCreateMockup(designImage);
+    let mockupUrl = await atlasCreateMockup(designImage);
+    
+    // Convert remote URLs to blob URLs to avoid CORS when displaying
+    if(mockupUrl && mockupUrl.startsWith('http')) {
+      try {
+        const resp = await fetch(mockupUrl);
+        const blob = await resp.blob();
+        mockupUrl = URL.createObjectURL(blob);
+      } catch(e) { console.warn('Mockup blob conversion failed, using URL:', e); }
+    }
+    if(designImage && designImage.startsWith('http')) {
+      try {
+        const resp = await fetch(designImage);
+        const blob = await resp.blob();
+        designImage = URL.createObjectURL(blob);
+        S.designRaw = designImage;
+      } catch(e) { console.warn('Design blob conversion failed:', e); }
+    }
     
     S.result = mockupUrl;
     S.designForPrint = designImage; // Keep raw design for print file
@@ -938,8 +966,8 @@ async function atlasCreateMockup(designImageUrl) {
   const zoneName = p.zones.find(z => z.id === zone)?.name || zone;
   const productImgUrl = p.img;
   
-  console.log('✦ Mockup: fetching product image...', productImgUrl);
-  const productB64 = await imageUrlToDataUri(productImgUrl);
+  console.log('✦ Mockup: fetching product image...', p.mockupImg || p.img);
+  const productB64 = await imageUrlToDataUri(p.mockupImg || p.img);
   console.log('✦ Mockup: product image ready, length:', productB64.length);
   
   let designB64 = designImageUrl;
