@@ -363,7 +363,7 @@ const PRODUCTS = [
     badge: 'NEW',
     img: SUPABASE_STORAGE + '/1-front.png',
     mockupImg: SUPABASE_STORAGE + '/mockup-image-led-cenicero.png',
-    medidasImg: SUPABASE_STORAGE + '/medidas-cenicero-led.png',
+    medidasImg: SUPABASE_STORAGE + '/3-front.png',
     glb: SUPABASE_STORAGE + '/cenicero.glb',
     zones: [
       {id:'tapa',name:'Tapa',icon:'⬆',default:true, print:{w_mm:50,h_mm:50,shape:'circle'}},
@@ -379,7 +379,7 @@ const PRODUCTS = [
     price: 14,
     img: SUPABASE_STORAGE + '/1-metal.png',
     mockupImg: SUPABASE_STORAGE + '/mockup-mechero.png',
-    medidasImg: SUPABASE_STORAGE + '/medidas-mechero.png',
+    medidasImg: SUPABASE_STORAGE + '/MEDIDAS-ENCENDEDOR.png',
     glb: SUPABASE_STORAGE + '/mechero.glb',
     zones: [
       {id:'cuerpo',name:'Cuerpo',icon:'▮',default:true, print:{w_mm:25,h_mm:78.5,shape:'rect'}}
@@ -394,7 +394,7 @@ const PRODUCTS = [
     price: 22,
     img: SUPABASE_STORAGE + '/1-madera%20(1).png',
     mockupImg: SUPABASE_STORAGE + '/mockup-grinder-wood.png',
-    medidasImg: SUPABASE_STORAGE + '/medidas-grinder.png',
+    medidasImg: SUPABASE_STORAGE + '/MEDIDAS-GRINDER-MADERA.png',
     glb: SUPABASE_STORAGE + '/grinder.glb',
     zones: [
       {id:'tapa_sup',name:'Tapa superior',icon:'⬆',default:true, print:{w_mm:55,h_mm:55,shape:'circle'}},
@@ -411,7 +411,7 @@ const PRODUCTS = [
     price: 18,
     img: SUPABASE_STORAGE + '/1-1-black.png',
     mockupImg: SUPABASE_STORAGE + '/mockup-portavasos.png',
-    medidasImg: SUPABASE_STORAGE + '/medidas-portavasos.png',
+    medidasImg: SUPABASE_STORAGE + '/MEDIDAS-PORTAVASOS.png',
     glb: SUPABASE_STORAGE + '/portavaso.glb',
     zones: [
       {id:'cara_sup',name:'Cara superior',icon:'⬆',default:true, print:{w_mm:80,h_mm:80,shape:'circle'}},
@@ -427,7 +427,7 @@ const PRODUCTS = [
     price: 25,
     img: SUPABASE_STORAGE + '/3-home-ceni.png',
     mockupImg: SUPABASE_STORAGE + '/mockup-image-cenicero-home.png',
-    medidasImg: SUPABASE_STORAGE + '/medidas-cenicero-home.png',
+    medidasImg: SUPABASE_STORAGE + '/1-home-ceni.png',
     glb: SUPABASE_STORAGE + '/cenicero-home.glb',
     zones: [
       {id:'tapa',name:'Tapa',icon:'⬆',default:true, print:{w_mm:92,h_mm:92,shape:'circle'}}
@@ -884,21 +884,15 @@ async function generate() {
     toast('Creando mockup del producto...','ok');
     let mockupUrl = await atlasCreateMockup(designImage);
     
-    // Convert remote URLs to blob URLs to avoid CORS when displaying
-    if(mockupUrl && mockupUrl.startsWith('http')) {
-      try {
-        const resp = await fetch(mockupUrl);
-        const blob = await resp.blob();
-        mockupUrl = URL.createObjectURL(blob);
-      } catch(e) { console.warn('Mockup blob conversion failed, using URL:', e); }
-    }
+    // Atlas URLs work directly in <img> tags — no need for blob conversion
+    // Also convert design URL if needed for print image generation
     if(designImage && designImage.startsWith('http')) {
       try {
         const resp = await fetch(designImage);
         const blob = await resp.blob();
         designImage = URL.createObjectURL(blob);
         S.designRaw = designImage;
-      } catch(e) { console.warn('Design blob conversion failed:', e); }
+      } catch(e) { console.warn('Design blob conversion skipped:', e); }
     }
     
     S.result = mockupUrl;
@@ -1221,7 +1215,7 @@ async function showResult() {
       <div>
         <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-family:var(--fd);font-weight:700">Mockup · ${zoneNames}</div>
         <div style="border-radius:var(--r);overflow:hidden;background:var(--bg);aspect-ratio:1/1;display:flex;align-items:center;justify-content:center">
-          <img src="${mockupImg}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:var(--r)" crossorigin="anonymous">
+          <img src="${mockupImg}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:var(--r)">
         </div>
       </div>
     </div>
