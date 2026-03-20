@@ -936,19 +936,19 @@ async function atlasCreateMockup(designImageUrl) {
   const p = S.product;
   const zone = S.selectedZones[0];
   const zoneName = p.zones.find(z => z.id === zone)?.name || zone;
-  const productImgUrl = p.img; // Product photo from Supabase
-  const productName = p.name;
+  const productImgUrl = p.img;
   
-  // Fetch product image as base64
+  console.log('✦ Mockup: fetching product image...', productImgUrl);
   const productB64 = await imageUrlToDataUri(productImgUrl);
+  console.log('✦ Mockup: product image ready, length:', productB64.length);
   
-  // Fetch design image as base64 (if it's a URL)
   let designB64 = designImageUrl;
   if(designImageUrl.startsWith('http')) {
+    console.log('✦ Mockup: fetching design image...');
     designB64 = await imageUrlToDataUri(designImageUrl);
   }
+  console.log('✦ Mockup: design image ready, length:', designB64.length);
   
-  // Build prompt matching what worked in Atlas Cloud playground
   const zoneInstructions = {
     'tapa': `en la tapa del producto, solo en la tapa, respetando los margenes`,
     'tapa_sup': `en la tapa superior del producto, solo en la tapa superior`,
@@ -962,6 +962,9 @@ async function atlasCreateMockup(designImageUrl) {
   const zoneText = zoneInstructions[zone] || `en ${zoneName} del producto`;
   
   const prompt = `Desarrollame un mockup con la imagen del producto que te comparto. Inserta la segunda imagen ${zoneText}. Devuelve la imagen del producto terminado con el diseño insertado ${zoneText}. Fondo negro de estudio fotografico para publicidad. Atencion: solo insertar ${zoneText}, no en otras partes.`;
+
+  console.log('✦ Mockup: calling Atlas Cloud nano-banana-2/edit...');
+  console.log('✦ Mockup prompt:', prompt.slice(0, 200));
 
   const res = await fetch('https://api.atlascloud.ai/api/v1/model/generateImage', {
     method: 'POST',
@@ -977,13 +980,16 @@ async function atlasCreateMockup(designImageUrl) {
   });
   
   if(!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || `Mockup failed (${res.status})`);
+    const errBody = await res.text();
+    console.error('✦ Mockup API error:', res.status, errBody);
+    throw new Error(`Mockup failed (${res.status}): ${errBody.slice(0, 200)}`);
   }
   
   const data = await res.json();
-  console.log('Atlas Mockup response:', JSON.stringify(data).slice(0, 500));
-  return await extractOrPoll(data);
+  console.log('✦ Mockup response:', JSON.stringify(data).slice(0, 800));
+  const result = await extractOrPoll(data);
+  console.log('✦ Mockup result URL:', result ? result.slice(0, 100) : 'NULL');
+  return result;
 }
 
 // Helper: convert image URL to data URI
