@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VIVOgift — Generador de Ebooks</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#080808;--bg2:#0e0e0e;--bg3:#161616;--bg4:#1e1e1e;--bg5:#262626;
+  --lime:#e8ff47;--lime10:#e8ff4718;--lime20:#e8ff4730;
+  --text:#f0ede8;--text2:#a09e99;--text3:#5a5a5a;
+  --r:14px;--rs:8px;
+  --fd:'Syne',sans-serif;--fb:'DM Sans',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100vh;display:flex;flex-direction:column;}
+
+/* NAV */
+.nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 24px;display:flex;justify-content:space-between;align-items:center;backdrop-filter:blur(24px);background:rgba(8,8,8,.75);border-bottom:1px solid #ffffff06}
+.logo{display:flex;align-items:center;font-family:var(--fd);font-size:21px;font-weight:800;letter-spacing:-.5px;text-decoration:none;color:var(--text)}
+.logo-o{width:24px;height:24px;border:2px solid var(--lime);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin:0 1px}
+.logo-o svg{width:9px;height:9px;fill:var(--lime)}
+.logo-gift{color:var(--lime);font-weight:300;font-size:19px}
+
+/* MAIN PANEL */
+.main{flex:1;background:var(--bg2);display:flex;align-items:center;justify-content:center;padding:100px 20px 40px;position:relative;overflow:hidden}
+.main::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%,#e8ff4705 0%,transparent 55%);pointer-events:none}
+
+/* FORM CONTAINER */
+.form-container{background:var(--bg3);border:1px solid #ffffff10;border-radius:var(--r);padding:32px;max-width:500px;width:100%;position:relative;z-index:1;box-shadow:0 10px 40px rgba(0,0,0,0.5)}
+.form-container h2{font-family:var(--fd);font-size:22px;font-weight:800;margin-bottom:8px;text-align:center;letter-spacing:-0.5px}
+.form-container p.sub{font-size:12px;color:var(--text2);text-align:center;margin-bottom:24px}
+
+.input-group{margin-bottom:16px}
+label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;letter-spacing:0.5px;text-transform:uppercase;font-family:var(--fd)}
+input, select, textarea{width:100%;padding:12px 14px;background:var(--bg);border:1.5px solid #ffffff12;border-radius:var(--rs);color:var(--text);font-family:var(--fb);font-size:13px;outline:none;transition:.2s}
+input:focus, select:focus, textarea:focus{border-color:var(--lime)}
+textarea{resize:vertical;min-height:80px}
+
+/* BUTTONS */
+.action-row{display:flex;gap:12px;margin-top:28px}
+.btn-secondary{flex:1;padding:13px;background:transparent;color:var(--text);font-family:var(--fd);font-size:12px;font-weight:700;border:1.5px solid #ffffff15;border-radius:var(--rs);cursor:pointer;transition:.2s;letter-spacing:.5px}
+.btn-secondary:hover{border-color:var(--lime20);color:var(--lime)}
+
+.btn-go{flex:2;padding:13px;background:var(--lime);color:var(--bg);font-family:var(--fd);font-size:13px;font-weight:800;border:none;border-radius:var(--rs);cursor:pointer;transition:.2s;letter-spacing:.5px;text-transform:uppercase}
+.btn-go:hover{box-shadow:0 8px 28px #e8ff4728;transform:translateY(-1px)}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="index.html" class="logo">VIV<span class="logo-o"><svg viewBox="0 0 24 24"><polygon points="9,6 9,18 19,12"/></svg></span><span class="logo-gift">gift</span></a>
+  <div style="display:flex;align-items:center;gap:10px">
+    <a href="index.html" style="font-size:11px;color:var(--text3);text-decoration:none;transition:.2s;padding:6px 12px;border-radius:var(--rs);border:1px solid #ffffff08">← Inicio</a>
+    <span style="font-size:10px;color:var(--text3);background:var(--bg3);padding:5px 10px;border-radius:20px;border:1px solid #ffffff08">✦ Ebooks</span>
+  </div>
+</nav>
+
+<div class="main">
+  <div class="form-container">
+    <h2>Crea su Cuento Mágico</h2>
+    <p class="sub">Describe la historia y nosotros la hacemos realidad.</p>
+    
+    <div class="input-group">
+      <label>Título de la Historia</label>
+      <input type="text" id="storyTitle" placeholder="Ej: La aventura espacial de Leo">
+    </div>
+
+    <div class="input-group">
+      <label>Nombre del Protagonista</label>
+      <input type="text" id="protagonistName" placeholder="Ej: Leo">
+    </div>
+
+    <div class="input-group">
+      <label>Descripción de la Historia</label>
+      <textarea id="storyDescription" placeholder="Ej: Leo viaja a Marte en un cohete de cartón y se hace amigo de un alienígena verde..."></textarea>
+    </div>
+
+    <div style="display:flex; gap:12px">
+      <div class="input-group" style="flex:1">
+        <label>Edad del Niño</label>
+        <select id="childAge">
+          <option value="0-3">0 - 3 años</option>
+          <option value="4-6">4 - 6 años</option>
+          <option value="7-9">7 - 9 años</option>
+          <option value="10-12">10 - 12 años</option>
+        </select>
+      </div>
+
+      <div class="input-group" style="flex:1">
+        <label>Estilo Visual</label>
+        <select id="visualStyle">
+          <option value="comic">Cómic Moderno</option>
+          <option value="acuarela">Acuarela Suave</option>
+          <option value="pixar">Animación 3D (Pixar)</option>
+          <option value="anime">Anime Ghibli</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label>Páginas (Aprox)</label>
+      <select id="pageCount">
+        <option value="10">Corto (10 páginas)</option>
+        <option value="20">Medio (20 páginas)</option>
+      </select>
+    </div>
+
+    <div class="action-row">
+      <button class="btn-secondary" id="btnPreview">✦ Preview Cover</button>
+      <button class="btn-go" id="btnGenerate">✦ Generate Magic Ebook</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // URL de tu Webhook en n8n
+  const N8N_WEBHOOK_URL = 'https://panel1.quickai.agency/webhook-test/generar-ebook';
+
+  document.getElementById('btnGenerate').addEventListener('click', async () => {
+    const btn = document.getElementById('btnGenerate');
+    const originalText = btn.textContent;
+
+    // 1. Recopilar los datos que escribió el cliente
+    const data = {
+      storyTitle: document.getElementById('storyTitle').value.trim(),
+      protagonistName: document.getElementById('protagonistName').value.trim(),
+      storyDescription: document.getElementById('storyDescription').value.trim(),
+      childAge: document.getElementById('childAge').value,
+      visualStyle: document.getElementById('visualStyle').value,
+      pageCount: document.getElementById('pageCount').value
+    };
+
+    // Validación básica: no enviar si está vacío
+    if (!data.storyTitle || !data.storyDescription) {
+      alert('Por favor, completa el título y la descripción de la historia.');
+      return;
+    }
+
+    // 2. Efecto visual: Botón pensando
+    btn.textContent = '⏳ Creando magia...';
+    btn.style.opacity = '0.7';
+    btn.disabled = true;
+
+    try {
+      // 3. El disparo a n8n
+      const response = await fetch(N8N_WEBHOOK_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+
+      if (response.ok) {
+        // ¡Éxito total!
+        btn.textContent = '✨ ¡Historia en proceso!';
+        btn.style.background = '#4ade80'; // Verde de éxito
+        btn.style.color = '#000';
+        console.log('Datos enviados con éxito a n8n');
+      } else {
+        throw new Error(`Error del servidor: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error de conexión:', error);
+      btn.textContent = '❌ Error al conectar';
+      btn.style.background = '#ff4444'; // Rojo de error
+      btn.style.color = '#fff';
+    } finally {
+      // Si hubo error, restaurar el botón después de 3 segundos
+      setTimeout(() => {
+        if (btn.textContent.includes('Error')) {
+          btn.textContent = originalText;
+          btn.style.background = 'var(--lime)';
+          btn.style.color = 'var(--bg)';
+          btn.style.opacity = '1';
+          btn.disabled = false;
+        }
+      }, 3000);
+    }
+  });
+</script>
+
+</body>
+</html>
