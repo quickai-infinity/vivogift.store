@@ -72,9 +72,12 @@ textarea{resize:vertical;min-height:80px}
       <input type="text" id="protagonistName" placeholder="Ej: Leo">
     </div>
 
-    <div class="input-group">
-      <label>Descripción de la Historia</label>
-      <textarea id="storyDescription" placeholder="Ej: Leo viaja a Marte en un cohete de cartón y se hace amigo de un alienígena verde..."></textarea>
+   <div class="input-group">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <label style="margin-bottom:0;">Descripción de la Historia</label>
+        <button type="button" id="btnMagicDesc" style="background:transparent; border:1px solid var(--lime); color:var(--lime); padding:4px 10px; border-radius:6px; font-size:10px; font-weight:700; cursor:pointer; font-family:var(--fd); transition:0.2s;">✨ Generar con IA</button>
+      </div>
+      <textarea id="storyDescription" placeholder="Escribe una idea básica o haz clic en 'Generar con IA' para que la escribamos por ti..."></textarea>
     </div>
 
     <div style="display:flex; gap:12px">
@@ -177,6 +180,52 @@ textarea{resize:vertical;min-height:80px}
           btn.style.opacity = '1';
           btn.disabled = false;
         }
+      }, 3000);
+    }
+  });
+  // Lógica para el botón de Generar Descripción con IA
+  document.getElementById('btnMagicDesc').addEventListener('click', async () => {
+    const title = document.getElementById('storyTitle').value.trim();
+    const protagonist = document.getElementById('protagonistName').value.trim();
+    const descBox = document.getElementById('storyDescription');
+    const btn = document.getElementById('btnMagicDesc');
+
+    if (!title) {
+      alert('¡Ups! Escribe al menos un Título o idea básica arriba para que la IA sepa de qué trata.');
+      return;
+    }
+
+    const originalText = btn.textContent;
+    btn.textContent = '⏳ Pensando...';
+    btn.disabled = true;
+    descBox.value = 'Nuestra IA está escribiendo la sinopsis...';
+
+    try {
+      // Llamamos a un NUEVO webhook exclusivo para esto
+      const response = await fetch('https://panel1.quickai.agency/webhook-test/generar-descripcion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: title, protagonist: protagonist })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        descBox.value = data.descripcion; // Pegamos el resultado en la caja
+        btn.textContent = '✓ ¡Listo!';
+        btn.style.background = 'var(--lime10)';
+      } else {
+        throw new Error('Error del servidor');
+      }
+    } catch (error) {
+      console.error(error);
+      descBox.value = '';
+      alert('Hubo un error al generar la descripción. Inténtalo de nuevo.');
+      btn.textContent = originalText;
+    } finally {
+      setTimeout(() => {
+        btn.textContent = originalText;
+        btn.style.background = 'transparent';
+        btn.disabled = false;
       }, 3000);
     }
   });
