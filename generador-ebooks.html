@@ -182,7 +182,7 @@ textarea{resize:vertical;min-height:80px}
   });
 
 
-  // ─── 2. LÓGICA DEL BOTÓN DE GENERAR DESCRIPCIÓN CON IA (Directo a Gemini) ───
+  // ─── 2. LÓGICA DEL BOTÓN DE GENERAR DESCRIPCIÓN CON IA (Vía n8n Webhook) ───
   document.getElementById('btnMagicDesc').addEventListener('click', async () => {
     const title = document.getElementById('storyTitle').value.trim();
     const protagonist = document.getElementById('protagonistName').value.trim();
@@ -190,7 +190,7 @@ textarea{resize:vertical;min-height:80px}
     const btn = document.getElementById('btnMagicDesc');
 
     if (!title) {
-      alert('¡Ups! Escribe al menos un Título o idea básica arriba para que la IA sepa de qué trata.');
+      alert('Escribe al menos un Título o idea básica arriba para que la IA sepa de qué trata.');
       return;
     }
 
@@ -199,42 +199,37 @@ textarea{resize:vertical;min-height:80px}
     btn.disabled = true;
     descBox.value = 'Nuestra IA está escribiendo la sinopsis...';
 
-    // Clave API de Gemini
-    const GEMINI_API_KEY = 'AIzaSyAXRJTv6LukQFkFUddEzzQbmPtIuoHjNcI';
-    
-    // El prompt oculto para estructurar la petición
-    const prompt = `Actúa como un escritor experto de cuentos mágicos infantiles.
-    Tengo esta idea o título: "${title}"
-    Protagonista: "${protagonist ? protagonist : 'un personaje sorpresa'}"
-    
-    Escribe una sinopsis o descripción mágica y muy atractiva (máximo 4 líneas) para generar un cuento. Devuelve SOLO el texto puro, sin comillas, sin introducciones y sin títulos.`;
+    // Apuntamos al webhook configurado en tu n8n para la descripción
+    // Nota: Cambia "webhook-test" por "webhook" si vas a usar el flujo en producción
+    const N8N_DESC_WEBHOOK_URL = 'https://panel1.quickai.agency/webhook-test/generar-descripcion'; 
 
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      const response = await fetch(N8N_DESC_WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 150, temperature: 0.8 }
+          title: title,
+          protagonist: protagonist
         })
       });
 
       if (response.ok) {
+        // Obtenemos la respuesta del nodo "Formato de Salida" de n8n
         const data = await response.json();
-        // Extraemos el texto puro de la respuesta de Gemini
-        const generatedText = data.candidates[0].content.parts[0].text;
+        
+        // Ajusta "data.text" según el nombre de la variable de salida que configuraste en n8n
+        const generatedText = data.text || data.output || data.descripcion || JSON.stringify(data);
         descBox.value = generatedText.trim(); 
         
         btn.textContent = '✓ ¡Magia creada!';
         btn.style.background = 'var(--lime10)';
       } else {
-        throw new Error('Error al conectar con la API de Gemini');
+        throw new Error(`Error del servidor n8n: ${response.status}`);
       }
     } catch (error) {
-      console.error(error);
+      console.error('Error:', error);
       descBox.value = '';
-      alert('Hubo un error al generar la descripción. Inténtalo de nuevo.');
-      btn.textContent = originalText;
+      alert('Hubo un error al generar la descripción. Revisa la consola o los logs de ejecución en n8n.');
     } finally {
       setTimeout(() => {
         btn.textContent = originalText;
