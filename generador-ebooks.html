@@ -227,18 +227,37 @@ textarea{resize:vertical;min-height:90px}
 .modal-close{width:32px;height:32px;background:var(--bg);border:1px solid #ffffff15;border-radius:50%;color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
 .modal-close:hover{border-color:var(--lime);color:var(--lime)}
 
-/* LOADING OVERLAY */
+/* LOADING OVERLAY - MULTICOLOR NEON SPINNER MODIFICADO */
 .loading-overlay{position:fixed;inset:0;background:rgba(8,8,8,.95);z-index:3000;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:.3s}
 .loading-overlay.active{opacity:1;visibility:visible}
-.loading-spinner{width:60px;height:60px;border:3px solid var(--bg4);border-top-color:var(--lime);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:20px}
+
+.loading-spinner {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  /* Gradiente cónico con los colores de neón girando */
+  background: conic-gradient(from 0deg, transparent 20%, #00f3ff 40%, #ff00ea 70%, var(--lime) 100%);
+  position: relative;
+  animation: spin 1.2s linear infinite;
+  margin-bottom: 24px;
+  box-shadow: 0 0 25px var(--lime20), 0 0 15px rgba(255, 0, 234, 0.2);
+}
+/* Centro hueco oscuro para crear el efecto de anillo */
+.loading-spinner::after {
+  content: "";
+  position: absolute;
+  inset: 4px; 
+  background: rgba(8,8,8,.95); /* Color de fondo del overlay */
+  border-radius: 50%;
+}
+
 @keyframes spin{to{transform:rotate(360deg)}}
-.loading-text{font-family:var(--fd);font-size:18px;margin-bottom:8px}
-.loading-sub{color:var(--text2);font-size:13px}
+.loading-text{font-family:var(--fd);font-size:18px;margin-bottom:8px;z-index:2}
+.loading-sub{color:var(--text2);font-size:13px;z-index:2}
 </style>
 </head>
 <body>
 
-<!-- NAV -->
 <nav class="nav">
   <a href="/" class="logo">
     VIV<span class="logo-o"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/></svg></span><span class="logo-gift">gift</span>
@@ -250,10 +269,8 @@ textarea{resize:vertical;min-height:90px}
   </div>
 </nav>
 
-<!-- MAIN -->
 <main class="main">
   
-  <!-- STEPS INDICATOR -->
   <div class="steps-container">
     <div class="step-dot active" data-step="1"></div>
     <div class="step-dot" data-step="2"></div>
@@ -262,9 +279,6 @@ textarea{resize:vertical;min-height:90px}
     <div class="step-dot" data-step="5"></div>
   </div>
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       PANEL 1: CREAR EBOOK
-       ═══════════════════════════════════════════════════════════════ -->
   <div class="panel active" id="panel1">
     <div class="create-panel">
       
@@ -341,16 +355,16 @@ textarea{resize:vertical;min-height:90px}
               </div>
             </div>
           </div>
-          <button class="btn-generate" id="btnGenerateEbook">✨ Crear Mi Ebook</button>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <button class="btn-generate" id="btnPreviewCover" style="background:transparent; border:1px solid var(--lime); color:var(--lime);">✨ Preview de Portada</button>
+            <button class="btn-generate" id="btnGenerateEbook">✨ Crear Mi Ebook</button>
+          </div>
         </div>
       </div>
 
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       PANEL 2: ELEGIR FORMATO
-       ═══════════════════════════════════════════════════════════════ -->
   <div class="panel" id="panel2">
     <h2>¿Cómo quieres tu libro?</h2>
     <p>Elige el formato perfecto para regalar o disfrutar</p>
@@ -392,16 +406,12 @@ textarea{resize:vertical;min-height:90px}
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       PANEL 3: PERSONALIZACIÓN REGALO
-       ═══════════════════════════════════════════════════════════════ -->
   <div class="panel" id="panel3">
     <h2>🎁 Personaliza tu Regalo</h2>
     <p>Haz que este regalo sea inolvidable</p>
 
     <div class="gift-sections">
       
-      <!-- MENSAJE DE VOZ -->
       <div class="gift-section">
         <h3><span class="emoji">🎤</span> Graba un Mensaje de Voz</h3>
         <p>Tu mensaje se reproducirá cuando el destinatario presione el botón mágico en el libro</p>
@@ -429,7 +439,6 @@ textarea{resize:vertical;min-height:90px}
         </div>
       </div>
 
-      <!-- DEDICATORIA -->
       <div class="gift-section">
         <h3><span class="emoji">💌</span> Escribe una Dedicatoria</h3>
         <p>Esta nota irá impresa en la primera página del libro</p>
@@ -440,7 +449,6 @@ textarea{resize:vertical;min-height:90px}
         </div>
       </div>
 
-      <!-- TIPO DE ENVÍO -->
       <div class="gift-section">
         <h3><span class="emoji">📦</span> Tipo de Envío</h3>
         <p>¿Es un regalo sorpresa? Lo enviamos sin mostrar el precio</p>
@@ -483,9 +491,6 @@ textarea{resize:vertical;min-height:90px}
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       PANEL 4: CHECKOUT
-       ═══════════════════════════════════════════════════════════════ -->
   <div class="panel" id="panel4">
     <h2>💳 Finalizar Compra</h2>
 
@@ -568,9 +573,6 @@ textarea{resize:vertical;min-height:90px}
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       PANEL 5: CONFIRMACIÓN
-       ═══════════════════════════════════════════════════════════════ -->
   <div class="panel" id="panel5">
     <div class="confirm-panel">
       <div class="confirm-icon">🎉</div>
@@ -602,7 +604,6 @@ textarea{resize:vertical;min-height:90px}
 
 </main>
 
-<!-- LOADING OVERLAY -->
 <div class="loading-overlay" id="loadingOverlay">
   <div class="loading-spinner"></div>
   <div class="loading-text" id="loadingText">Creando tu ebook mágico...</div>
@@ -711,9 +712,53 @@ document.querySelectorAll('.style-option').forEach(opt => {
 });
 
 // ═══════════════════════════════════════════════════════════════
-// PANEL 1: CREAR EBOOK
+// PANEL 1: CREAR EBOOK & PORTADA
 // ═══════════════════════════════════════════════════════════════
 
+// BOTON: PREVIEW DE PORTADA
+document.getElementById('btnPreviewCover').addEventListener('click', async () => {
+  const title = document.getElementById('storyTitle').value.trim();
+  const protagonist = document.getElementById('protagonistName').value.trim();
+  
+  if (!title) {
+    alert('Por favor, ingresa el Título de la historia para generar la portada.');
+    return;
+  }
+
+  showLoading('Generando portada mágica...', 'Esto puede tomar 10-30 segundos');
+  
+  try {
+    const response = await fetch(CONFIG.webhooks.cover, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: title,
+        protagonist: protagonist,
+        style: state.ebook.style
+      })
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      const imgUrl = data.coverUrl || data.imageUrl || data.url || data[0]?.url;
+      
+      if (imgUrl) {
+        state.ebook.coverUrl = imgUrl;
+        document.getElementById('miniBookCover').innerHTML = `<img src="${imgUrl}" alt="Portada">`;
+      }
+    } else {
+      throw new Error('Error en el webhook de portada');
+    }
+  } catch (error) {
+    console.error(error);
+    alert('Hubo un error al generar la portada. Por favor intenta de nuevo.');
+  } finally {
+    hideLoading();
+  }
+});
+
+
+// BOTON: CREAR EBOOK COMPLETO
 document.getElementById('btnGenerateEbook').addEventListener('click', async () => {
   const title = document.getElementById('storyTitle').value.trim();
   const protagonist = document.getElementById('protagonistName').value.trim();
@@ -753,11 +798,10 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
       const data = await response.json();
       state.ebook.docUrl = data.docUrl;
       state.ebook.pdfUrl = data.pdfUrl;
-      state.ebook.coverUrl = data.coverUrl;
       
-      // Actualizar preview
-      if (state.ebook.coverUrl) {
-        document.getElementById('miniBookCover').innerHTML = `<img src="${state.ebook.coverUrl}" alt="Portada">`;
+      if(!state.ebook.coverUrl && data.coverUrl) {
+        state.ebook.coverUrl = data.coverUrl;
+        document.getElementById('miniBookCover').innerHTML = `<img src="${data.coverUrl}" alt="Portada">`;
       }
       
       hideLoading();
@@ -912,7 +956,7 @@ document.querySelectorAll('.ship-option').forEach(opt => {
 });
 
 // ═══════════════════════════════════════════════════════════════
-// PANEL 4: CHECKOUT
+// PANEL 4: CHECKOUT Y PROCESAMIENTO
 // ═══════════════════════════════════════════════════════════════
 
 document.getElementById('btnPay').addEventListener('click', async () => {
@@ -932,27 +976,31 @@ document.getElementById('btnPay').addEventListener('click', async () => {
   
   showLoading('Procesando tu pedido...', 'Esto solo tomará un momento');
   
+  const orderId = 'VG-' + Date.now();
+
   try {
-    // Subir audio si existe
+    // 1. Subir audio si existe (SOLUCION N8N RAW BODY)
     let audioFileId = null;
     if (state.gift.audioBlob) {
-      const formData = new FormData();
-      formData.append('audio', state.gift.audioBlob, 'mensaje-voz.webm');
-      formData.append('orderId', 'VG-' + Date.now());
-      
-      const audioResponse = await fetch(CONFIG.webhooks.uploadAudio, {
+      // Como n8n tiene Raw Body activado, enviamos el Blob directo
+      // Pasamos el orderId por la URL como Query Parameter
+      const audioResponse = await fetch(`${CONFIG.webhooks.uploadAudio}?orderId=${orderId}`, {
         method: 'POST',
-        body: formData
+        headers: { 'Content-Type': 'audio/webm' },
+        body: state.gift.audioBlob
       });
       
       if (audioResponse.ok) {
         const audioData = await audioResponse.json();
         audioFileId = audioData.fileId;
+      } else {
+        console.warn('El audio no pudo subirse, continuando el proceso de todas formas.');
       }
     }
     
-    // Enviar pedido
+    // 2. Enviar pedido
     const orderData = {
+      orderId: orderId,
       ebook: state.ebook,
       gift: {
         ...state.gift,
@@ -976,14 +1024,14 @@ document.getElementById('btnPay').addEventListener('click', async () => {
       const data = await response.json();
       
       // Actualizar confirmación
-      document.getElementById('orderNumber').textContent = data.orderId || 'VG-' + Date.now();
+      document.getElementById('orderNumber').textContent = data.orderId || orderId;
       document.getElementById('confirmTitle').textContent = state.ebook.title;
       document.getElementById('confirmRecipient').textContent = state.gift.recipientName || 'N/A';
       
       hideLoading();
       goToStep(5);
     } else {
-      throw new Error('Error procesando pedido');
+      throw new Error('Error procesando pedido principal');
     }
   } catch (error) {
     console.error(error);
