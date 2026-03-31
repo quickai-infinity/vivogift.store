@@ -207,6 +207,17 @@ textarea{resize:vertical;min-height:90px}
 /* ERROR TOAST */
 .error-toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a1010;border:1px solid #ff444440;color:#ff6b6b;padding:14px 24px;border-radius:var(--rs);font-size:13px;font-family:var(--fb);z-index:4000;transition:transform .3s ease;max-width:90vw;text-align:center}
 .error-toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ZOOM MODAL */
+.zoom-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);backdrop-filter:blur(16px);z-index:5000;display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:opacity .3s ease;cursor:zoom-out}
+.zoom-overlay.active{opacity:1;visibility:visible}
+.zoom-overlay img{max-width:90vw;max-height:85vh;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 40px var(--lime10);transform:scale(.85);transition:transform .35s cubic-bezier(.22,1,.36,1);object-fit:contain}
+.zoom-overlay.active img{transform:scale(1)}
+.zoom-close{position:absolute;top:20px;right:24px;width:40px;height:40px;background:var(--bg4);border:1px solid #ffffff20;border-radius:50%;color:var(--text);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s;z-index:5001}
+.zoom-close:hover{border-color:var(--lime);color:var(--lime);transform:scale(1.1)}
+.zoom-hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);color:var(--text3);font-size:12px;font-family:var(--fd)}
+.mini-book-cover{cursor:pointer}
+.mini-book-cover:hover{opacity:.9}
 </style>
 </head>
 <body>
@@ -520,6 +531,13 @@ textarea{resize:vertical;min-height:90px}
 <!-- ERROR TOAST -->
 <div class="error-toast" id="errorToast"></div>
 
+<!-- ZOOM MODAL para ver portada en grande -->
+<div class="zoom-overlay" id="zoomOverlay">
+  <button class="zoom-close" id="zoomClose">✕</button>
+  <img id="zoomImage" src="" alt="Portada ampliada">
+  <div class="zoom-hint">Click en cualquier sitio para cerrar</div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════════════════════
 // CONFIGURACIÓN
@@ -628,6 +646,33 @@ function goToStep(step) {
   });
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
+// ═══════════════════════════════════════════════════════════════
+// ZOOM MODAL — Click en la portada para verla en grande
+// ═══════════════════════════════════════════════════════════════
+
+const zoomOverlay = document.getElementById('zoomOverlay');
+const zoomImage   = document.getElementById('zoomImage');
+
+// Click en la portada mini-book → abrir zoom
+document.getElementById('miniBookCover').addEventListener('click', () => {
+  if (!state.ebook.coverUrl) return; // Solo si hay portada generada
+  zoomImage.src = state.ebook.coverUrl;
+  zoomOverlay.classList.add('active');
+});
+
+// Cerrar zoom: click en overlay, botón X, o tecla Escape
+zoomOverlay.addEventListener('click', (e) => {
+  if (e.target === zoomOverlay || e.target.id === 'zoomClose') {
+    zoomOverlay.classList.remove('active');
+  }
+});
+document.getElementById('zoomClose').addEventListener('click', () => {
+  zoomOverlay.classList.remove('active');
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') zoomOverlay.classList.remove('active');
+});
 
 // ═══════════════════════════════════════════════════════════════
 // SELECCIÓN DE ESTILO VISUAL
