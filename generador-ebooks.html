@@ -321,12 +321,12 @@ textarea{resize:vertical;min-height:90px}
             </div>
           </div>
           <div style="display:flex;flex-direction:column;gap:10px">
-            <button class="btn-generate" id="btnPreviewCover" style="background:transparent;border:1px solid var(--lime);color:var(--lime)">✨ Preview de Portada</button>
-            <button class="btn-generate" id="btnGenerateEbook">✨ Crear Mi Ebook</button>
+           <button class="btn-generate" id="btnPreviewCover" style="background:transparent;border:1px solid var(--lime);color:var(--lime)">✨ Preview de Portada</button>
+           <button class="btn-generate" id="btnDownloadCover" style="display:none; background:var(--bg4); border:1px solid #ffffff20; color:var(--text); margin-top: 10px; margin-bottom: 10px;">⬇️ Descargar Portada</button>
+           <button class="btn-generate" id="btnGenerateEbook">✨ Crear Mi Ebook</button>
           </div>
         </div>
       </div>
-
     </div>
   </div>
 
@@ -523,9 +523,16 @@ textarea{resize:vertical;min-height:90px}
 
 <!-- LOADING -->
 <div class="loading-overlay" id="loadingOverlay">
-  <div class="loading-spinner"></div>
+  <div class="loading-spinner" id="loadingSpinner"></div>
   <div class="loading-text" id="loadingText">Creando tu ebook mágico...</div>
   <div class="loading-sub" id="loadingSub">Esto puede tomar unos minutos</div>
+  
+  <div id="progressContainer" style="display:none; width: 80%; max-width: 400px; margin-top: 20px; text-align: center;">
+    <div style="width: 100%; height: 12px; background: #262626; border-radius: 10px; overflow: hidden; border: 1px solid #ffffff20;">
+      <div id="progressBarFill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #ff00ff, #00ffff); border-radius: 10px; transition: width 0.5s ease;"></div>
+    </div>
+    <p id="progressPercent" style="color: var(--lime); font-family: var(--fd); font-weight: bold; margin-top: 8px;">0%</p>
+  </div>
 </div>
 
 <!-- ERROR TOAST -->
@@ -803,7 +810,7 @@ document.getElementById('btnPreviewCover').addEventListener('click', async () =>
     
     // Asignar src DESPUÉS de configurar onload/onerror
     img.src = imgUrl;
-    
+    document.getElementById('btnDownloadCover').style.display = 'block'; // Mostrar botón
   } catch (error) {
     console.error('[Preview Cover] Error completo:', error);
     showError(error.message || 'Error al generar la portada. Intenta de nuevo.');
@@ -816,6 +823,8 @@ document.getElementById('btnPreviewCover').addEventListener('click', async () =>
 // ═══════════════════════════════════════════════════════════════
 // PANEL 1: CREAR EBOOK COMPLETO
 // ═══════════════════════════════════════════════════════════════
+
+let progressInterval;
 
 document.getElementById('btnGenerateEbook').addEventListener('click', async () => {
   const title       = document.getElementById('storyTitle').value.trim();
@@ -832,7 +841,27 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
   state.ebook.pages       = parseInt(document.getElementById('pageCount').value);
   state.ebook.age         = document.getElementById('childAge').value;
 
-  showLoading('Creando tu ebook mágico...', 'Esto puede tomar unos minutos');
+  // Mostrar loading con barra
+  document.getElementById('loadingText').textContent = 'Creando tu ebook mágico...';
+  document.getElementById('loadingSub').textContent = 'Escribiendo diálogos e ilustrando páginas...';
+  document.getElementById('loadingOverlay').classList.add('active');
+  document.getElementById('progressContainer').style.display = 'block';
+  
+  const barFill = document.getElementById('progressBarFill');
+  const percentText = document.getElementById('progressPercent');
+  
+  // Animación de barra falsa (sube hasta 90% en 60 segundos)
+  let currentProgress = 0;
+  barFill.style.width = '0%';
+  percentText.textContent = '0%';
+  
+  progressInterval = setInterval(() => {
+    if (currentProgress < 90) {
+      currentProgress += 1;
+      barFill.style.width = currentProgress + '%';
+      percentText.textContent = currentProgress + '%';
+    }
+  }, 600); // 1% cada 0.6 segundos
   
   try {
     const response = await fetch(CONFIG.webhooks.ebook, {
@@ -854,16 +883,45 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
     
     const rawText = await response.text();
     if (!rawText) throw new Error('Respuesta vacía');
-    
     const data = JSON.parse(rawText);
+    
     state.ebook.pdfUrl = data.pdfUrl || data.pdf_url || null;
     state.ebook.docUrl = data.docUrl || data.doc_url || null;
     
-    hideLoading();
-    goToStep(2);
+    // ¡ÉXITO! Completar barra al 100%
+    clearInterval(progressInterval);
+    barFill.style.width = '100%';
+    barFill.style.background = '#00ff00'; // Se pone verde
+    percentText.textContent = '100% - ¡LISTO!';
+    document.getElementById('loadingSpinner').style.display = 'none'; // Quitar spinner
+    document.getElementById('loadingText').textContent = '¡Tu libro está terminado!';
+    document.getElementById('loadingSub').textContent = 'Descargando automáticamente...';
+    
+    // DESCARGA AUTOMÁTICA DEL PDF
+    setTimeout(() => {
+      if(state.ebook.pdfUrl) {
+        const a = document.createElement("a");
+        a.href = state.ebook.pdfUrl;
+        a.download = "VIVOgift_" + title.replace(/\s+/g, '_') + ".pdf";
+        a.target = "_blank"; // Por si el navegador bloquea la descarga directa
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+      
+      // Ocultar pantalla de carga y avanzar al siguiente paso
+      hideLoading();
+      document.getElementById('progressContainer').style.display = 'none';
+      document.getElementById('loadingSpinner').style.display = 'block';
+      barFill.style.background = 'linear-gradient(90deg, #ff00ff, #00ffff)'; // Restaurar color original
+      goToStep(2);
+    }, 2000); // Espera 2 segundos para que el usuario lea que ya terminó
+    
   } catch (error) {
     console.error('[Crear Ebook] Error:', error);
+    clearInterval(progressInterval);
     hideLoading();
+    document.getElementById('progressContainer').style.display = 'none';
     showError('Error al crear el ebook. Intenta de nuevo.');
   }
 });
@@ -1134,6 +1192,37 @@ document.getElementById('btnDownloadDoc').addEventListener('click', () => {
   } else {
     showError('El documento aún no está disponible.');
   }
+});
+document.getElementById('btnDownloadCover').addEventListener('click', () => {
+  const coverBase64 = state.ebook.coverUrl;
+  if (!coverBase64) return;
+
+  const btn = document.getElementById('btnDownloadCover');
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '⏳ Descargando...';
+
+  // Lógica antibombas para descargar Base64
+  fetch(coverBase64)
+    .then(res => res.blob())
+    .then(blob => {
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = blobUrl;
+      a.download = 'Portada_VIVOgift.png';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(blobUrl);
+      document.body.removeChild(a);
+      
+      btn.innerHTML = '✅ ¡Descargada!';
+      setTimeout(() => btn.innerHTML = originalText, 3000);
+    })
+    .catch(err => {
+      console.error("Error al descargar:", err);
+      showError('Error al descargar la portada.');
+      btn.innerHTML = originalText;
+    });
 });
 </script>
 
