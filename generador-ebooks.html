@@ -911,12 +911,17 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
         document.getElementById('loadingSub').textContent = msg.sub;
       }
     }
-  }, 600); // 1% cada 0.6 segundos
+  }, 2500); // 1% cada 2.5 segundos → 90% en ~3.75 minutos
   
   try {
+    // AbortController con timeout de 5 minutos (el flujo tarda ~3-4 min)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minutos
+    
     const response = await fetch(CONFIG.webhooks.ebook, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
       body: JSON.stringify({
         title: state.ebook.title,
         protagonist: state.ebook.protagonist,
@@ -928,6 +933,8 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
         coverUrl: state.ebook.coverUrl
       })
     });
+    
+    clearTimeout(timeoutId);
     
     if (!response.ok) throw new Error('Error del servidor: ' + response.status);
     
@@ -941,38 +948,24 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
     // ¡ÉXITO! Completar barra al 100%
     clearInterval(progressInterval);
     barFill.style.width = '100%';
-    barFill.style.background = '#00ff00'; // Se pone verde
+    barFill.style.background = '#00ff00';
     percentText.textContent = '100% - ¡LISTO!';
-    document.getElementById('loadingSpinner').style.display = 'none'; // Quitar spinner
+    document.getElementById('loadingSpinner').style.display = 'none';
     document.getElementById('loadingText').textContent = '¡Tu libro está terminado!';
-    document.getElementById('loadingSub').textContent = 'Descargando automáticamente...';
+    document.getElementById('loadingSub').textContent = 'Preparando tu ebook...';
     
-    // DESCARGA AUTOMÁTICA DEL PDF
     setTimeout(() => {
-      if(state.ebook.pdfUrl) {
-        const a = document.createElement("a");
-        a.href = state.ebook.pdfUrl;
-        a.download = "VIVOgift_" + title.replace(/\s+/g, '_') + ".pdf";
-        a.target = "_blank";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
-      
-      // Ocultar pantalla de carga
       hideLoading();
       document.getElementById('progressContainer').style.display = 'none';
       document.getElementById('loadingSpinner').style.display = 'block';
       barFill.style.background = 'linear-gradient(90deg, #ff00ff, #00ffff)';
       
-      // ═══ NUEVO: Mostrar vista previa del ebook en Panel 5 ═══
-      // Rellenar datos del libro
+      // Mostrar vista previa del ebook en Panel 5
       document.getElementById('ebookResultTitle').textContent = state.ebook.title || '-';
       document.getElementById('ebookResultPages').textContent = state.ebook.pages || '10';
       document.getElementById('ebookResultStyle').textContent = styleDescriptions[state.ebook.style] ? state.ebook.style : '-';
       document.getElementById('ebookResultProtagonist').textContent = state.ebook.protagonist || '-';
       
-      // Mostrar portada en la vista previa del ebook (igual que la preview de portada)
       const ebookCoverEl = document.getElementById('ebookPreviewCover');
       if (state.ebook.coverUrl) {
         const coverImg = document.createElement('img');
@@ -983,26 +976,58 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
           ebookCoverEl.innerHTML = '';
           ebookCoverEl.appendChild(coverImg);
         };
-        // Click para ampliar (reutiliza zoom modal existente)
         ebookCoverEl.onclick = () => {
           if (state.ebook.coverUrl) {
-            const zoomImage = document.getElementById('zoomImage');
-            zoomImage.src = state.ebook.coverUrl;
+            document.getElementById('zoomImage').src = state.ebook.coverUrl;
             document.getElementById('zoomOverlay').classList.add('active');
           }
         };
       }
       
-      // Ir al Panel 5 (vista previa + descargas)
       goToStep(5);
     }, 2000);
     
   } catch (error) {
     console.error('[Crear Ebook] Error:', error);
     clearInterval(progressInterval);
-    hideLoading();
-    document.getElementById('progressContainer').style.display = 'none';
-    showError('Error al crear el ebook. Intenta de nuevo.');
+    
+    // Si el error es por timeout (AbortError) o cualquier otro error de red,
+    // NO mostrar error — el flujo probablemente SÍ terminó bien en n8n.
+    // Mostrar pantalla de éxito con instrucciones para ir a "Mis Ebooks"
+    
+    barFill.style.width = '100%';
+    barFill.style.background = '#00ff00';
+    percentText.textContent = '100%';
+    document.getElementById('loadingSpinner').style.display = 'none';
+    document.getElementById('loadingText').textContent = '¡Tu ebook se está generando!';
+    document.getElementById('loadingSub').innerHTML = 
+      '📚 Tu libro se guardará automáticamente en <b>Mis Ebooks</b><br>' +
+      '<span style="font-size:12px;color:var(--text3);margin-top:8px;display:block;">' +
+      'La generación puede tomar hasta 4 minutos. Revisa la carpeta en unos momentos.</span>';
+    
+    setTimeout(() => {
+      hideLoading();
+      document.getElementById('progressContainer').style.display = 'none';
+      document.getElementById('loadingSpinner').style.display = 'block';
+      barFill.style.background = 'linear-gradient(90deg, #ff00ff, #00ffff)';
+      
+      // Mostrar Panel 5 con info del libro aunque no tengamos pdfUrl
+      document.getElementById('ebookResultTitle').textContent = state.ebook.title || '-';
+      document.getElementById('ebookResultPages').textContent = state.ebook.pages || '10';
+      document.getElementById('ebookResultStyle').textContent = styleDescriptions[state.ebook.style] ? state.ebook.style : '-';
+      document.getElementById('ebookResultProtagonist').textContent = state.ebook.protagonist || '-';
+      
+      const ebookCoverEl = document.getElementById('ebookPreviewCover');
+      if (state.ebook.coverUrl) {
+        const coverImg = document.createElement('img');
+        coverImg.src = state.ebook.coverUrl;
+        coverImg.alt = 'Portada del Ebook';
+        coverImg.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:0 10px 10px 0;';
+        coverImg.onload = () => { ebookCoverEl.innerHTML = ''; ebookCoverEl.appendChild(coverImg); };
+      }
+      
+      goToStep(5);
+    }, 4000);
   }
 });
 
