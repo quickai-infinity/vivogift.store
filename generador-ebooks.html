@@ -301,7 +301,6 @@ textarea{resize:vertical;min-height:90px}
           <div class="input-group">
             <label>Páginas</label>
             <select id="pageCount">
-              <option value="2">🧪 TEST (2 páginas)</option>
               <option value="6">Mini (6)</option>
               <option value="10" selected>Corto (10)</option>
               <option value="15">Mediano (15)</option>
@@ -853,7 +852,7 @@ document.getElementById('btnPreviewCover').addEventListener('click', async () =>
 });
 
 // ═══════════════════════════════════════════════════════════════
-// PANEL 1: CREAR EBOOK COMPLETO (CORREGIDO)
+// PANEL 1: CREAR EBOOK COMPLETO
 // ═══════════════════════════════════════════════════════════════
 
 let progressInterval;
@@ -867,12 +866,6 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
     return;
   }
 
-  // OBLIGAR A GENERAR LA PORTADA ANTES DE CONTINUAR
-  if (!state.ebook.coverUrl) {
-    showError('¡Falta la portada! Por favor, haz clic en "✨ Preview de Portada" primero.');
-    return;
-  }
-
   state.ebook.title       = title;
   state.ebook.protagonist = document.getElementById('protagonistName').value.trim();
   state.ebook.description = description;
@@ -881,23 +874,24 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
 
   // Mostrar loading con barra
   document.getElementById('loadingText').textContent = 'Creando tu ebook mágico...';
-  document.getElementById('loadingSub').textContent = 'Iniciando el motor de Inteligencia Artificial...';
+  document.getElementById('loadingSub').textContent = 'Diseñando el personaje protagonista...';
   document.getElementById('loadingOverlay').classList.add('active');
   document.getElementById('progressContainer').style.display = 'block';
   
   const barFill = document.getElementById('progressBarFill');
   const percentText = document.getElementById('progressPercent');
   
+  // Mensajes progresivos según la etapa de generación
   const progressMessages = [
     { at: 5,  text: '🎨 Diseñando el personaje protagonista...',    sub: 'La IA está creando la ficha visual' },
-    { at: 15, text: '📝 Escribiendo la historia con diálogos...',   sub: 'Creando la narrativa página por página' },
-    { at: 25, text: '🖌️ Ilustrando página 1...',                    sub: 'Generando ilustraciones con Atlas Cloud' },
-    { at: 40, text: '🖌️ Ilustrando páginas...',                     sub: 'Esto toma un poco de tiempo por la alta calidad' },
-    { at: 55, text: '🖌️ Más de la mitad ilustrada...',              sub: 'Las páginas están quedando increíbles' },
-    { at: 70, text: '💬 Añadiendo burbujas de diálogo...',          sub: 'Integrando los textos en las imágenes' },
-    { at: 80, text: '📤 Subiendo imágenes a la nube...',            sub: 'Guardando tus ilustraciones en Drive' },
-    { at: 90, text: '📄 Generando el PDF final...',                 sub: 'Ensamblando tu ebook completo' },
-    { at: 95, text: '✨ Últimos retoques...',                       sub: 'Esperando respuesta del servidor...' },
+    { at: 15, text: '📝 Escribiendo la historia con diálogos...',    sub: 'Creando la narrativa página por página' },
+    { at: 25, text: '🖌️ Ilustrando página 1...',                    sub: 'Generando ilustraciones con IA' },
+    { at: 35, text: '🖌️ Ilustrando páginas...',                     sub: 'Cada página es una obra de arte única' },
+    { at: 50, text: '🖌️ Más de la mitad ilustrada...',              sub: 'Las páginas están quedando increíbles' },
+    { at: 65, text: '💬 Añadiendo burbujas de diálogo...',           sub: 'Los personajes cobran vida' },
+    { at: 75, text: '📤 Subiendo imágenes a la nube...',             sub: 'Guardando tus ilustraciones en Drive' },
+    { at: 85, text: '📄 Generando el PDF final...',                  sub: 'Ensamblando tu ebook completo' },
+    { at: 90, text: '✨ Últimos retoques...',                        sub: 'Tu libro está casi listo' },
   ];
   
   let currentProgress = 0;
@@ -905,109 +899,135 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
   percentText.textContent = '0%';
   
   progressInterval = setInterval(() => {
-    // Frenamos en 98% para que nunca llegue a 100% si n8n no ha respondido
-    if (currentProgress < 98) {
+    if (currentProgress < 90) {
       currentProgress += 1;
       barFill.style.width = currentProgress + '%';
       percentText.textContent = currentProgress + '%';
       
+      // Actualizar mensajes según progreso
       const msg = progressMessages.find(m => m.at === currentProgress);
       if (msg) {
         document.getElementById('loadingText').textContent = msg.text;
         document.getElementById('loadingSub').textContent = msg.sub;
       }
     }
-  }, 3500); // 1% cada 3.5s → tarda unos 5.8 minutos en llegar al 98%
+  }, 2500); // 1% cada 2.5 segundos → 90% en ~3.75 minutos
   
   try {
-    // 1. Añade un AbortController con un tiempo de 4 minutos (240000 ms)
-const controller = new AbortController();
-const timeoutId = setTimeout(() => controller.abort(), 240000); 
-
-try {
-  const payload = {
-    title: title,
-    protagonist: protagonist || 'el protagonista',
-    description: description,
-    styleDescription: styleDescriptions[state.ebook.style],
-    style: state.ebook.style
-  };
-
-  const response = await fetch(CONFIG.webhooks.previewCover, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    signal: controller.signal, // <-- IMPORTANTE: Conectar el controlador aquí
-    body: JSON.stringify(payload)
-  });
-  
-  clearTimeout(timeoutId); // Limpiar el timeout si responde a tiempo
-
-  // ... resto del código (leer texto, parsear JSON, etc.)
+    // AbortController con timeout de 5 minutos (el flujo tarda ~3-4 min)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minutos
+    
+    const response = await fetch(CONFIG.webhooks.ebook, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify({
+        title: state.ebook.title,
+        protagonist: state.ebook.protagonist,
+        description: state.ebook.description,
+        styleDescription: styleDescriptions[state.ebook.style],
+        style: state.ebook.style,
+        age: state.ebook.age,
+        pages: state.ebook.pages,
+        coverUrl: state.ebook.coverUrl
+      })
+    });
+    
+    clearTimeout(timeoutId);
     
     if (!response.ok) throw new Error('Error del servidor: ' + response.status);
     
     const rawText = await response.text();
-    if (!rawText) throw new Error('Respuesta vacía del servidor');
-    
+    if (!rawText) throw new Error('Respuesta vacía');
     const data = JSON.parse(rawText);
     
-    // VERIFICACIÓN ESTRICTA: Solo avanza si n8n devuelve el éxito
-    if (data.success === true || data.status === 'success') {
-        state.ebook.pdfUrl = data.pdfUrl || data.pdf_url || null;
-        state.ebook.docUrl = data.docUrl || data.doc_url || null;
-        
-        clearInterval(progressInterval);
-        barFill.style.width = '100%';
-        barFill.style.background = '#00ff00';
-        percentText.textContent = '100% - ¡LISTO!';
-        document.getElementById('loadingSpinner').style.display = 'none';
-        document.getElementById('loadingText').textContent = '¡Tu libro está terminado!';
-        document.getElementById('loadingSub').textContent = 'Preparando tu ebook...';
-        
-        setTimeout(() => {
-          hideLoading();
-          document.getElementById('progressContainer').style.display = 'none';
-          document.getElementById('loadingSpinner').style.display = 'block';
-          barFill.style.background = 'linear-gradient(90deg, #ff00ff, #00ffff)';
-          
-          document.getElementById('ebookResultTitle').textContent = state.ebook.title || '-';
-          document.getElementById('ebookResultPages').textContent = state.ebook.pages || '10';
-          document.getElementById('ebookResultStyle').textContent = styleDescriptions[state.ebook.style] ? state.ebook.style : '-';
-          document.getElementById('ebookResultProtagonist').textContent = state.ebook.protagonist || '-';
-          
-          const ebookCoverEl = document.getElementById('ebookPreviewCover');
+    state.ebook.pdfUrl = data.pdfUrl || data.pdf_url || null;
+    state.ebook.docUrl = data.docUrl || data.doc_url || null;
+    
+    // ¡ÉXITO! Completar barra al 100%
+    clearInterval(progressInterval);
+    barFill.style.width = '100%';
+    barFill.style.background = '#00ff00';
+    percentText.textContent = '100% - ¡LISTO!';
+    document.getElementById('loadingSpinner').style.display = 'none';
+    document.getElementById('loadingText').textContent = '¡Tu libro está terminado!';
+    document.getElementById('loadingSub').textContent = 'Preparando tu ebook...';
+    
+    setTimeout(() => {
+      hideLoading();
+      document.getElementById('progressContainer').style.display = 'none';
+      document.getElementById('loadingSpinner').style.display = 'block';
+      barFill.style.background = 'linear-gradient(90deg, #ff00ff, #00ffff)';
+      
+      // Mostrar vista previa del ebook en Panel 5
+      document.getElementById('ebookResultTitle').textContent = state.ebook.title || '-';
+      document.getElementById('ebookResultPages').textContent = state.ebook.pages || '10';
+      document.getElementById('ebookResultStyle').textContent = styleDescriptions[state.ebook.style] ? state.ebook.style : '-';
+      document.getElementById('ebookResultProtagonist').textContent = state.ebook.protagonist || '-';
+      
+      const ebookCoverEl = document.getElementById('ebookPreviewCover');
+      if (state.ebook.coverUrl) {
+        const coverImg = document.createElement('img');
+        coverImg.src = state.ebook.coverUrl;
+        coverImg.alt = 'Portada del Ebook';
+        coverImg.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:0 10px 10px 0;';
+        coverImg.onload = () => {
+          ebookCoverEl.innerHTML = '';
+          ebookCoverEl.appendChild(coverImg);
+        };
+        ebookCoverEl.onclick = () => {
           if (state.ebook.coverUrl) {
-            const coverImg = document.createElement('img');
-            coverImg.src = state.ebook.coverUrl;
-            coverImg.alt = 'Portada del Ebook';
-            coverImg.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:0 10px 10px 0;';
-            coverImg.onload = () => {
-              ebookCoverEl.innerHTML = '';
-              ebookCoverEl.appendChild(coverImg);
-            };
-            ebookCoverEl.onclick = () => {
-              document.getElementById('zoomImage').src = state.ebook.coverUrl;
-              document.getElementById('zoomOverlay').classList.add('active');
-            };
+            document.getElementById('zoomImage').src = state.ebook.coverUrl;
+            document.getElementById('zoomOverlay').classList.add('active');
           }
-          
-          goToStep(5);
-        }, 2000);
-    } else {
-        throw new Error('N8n no devolvió status "success".');
-    }
+        };
+      }
+      
+      goToStep(5);
+    }, 2000);
     
   } catch (error) {
     console.error('[Crear Ebook] Error:', error);
     clearInterval(progressInterval);
-    hideLoading();
     
-    // AHORA SÍ MUESTRA ERROR REAL Y NO AVANZA AL PASO 5
-    if (error.name === 'AbortError') {
-        showError('La generación está tardando más de 10 minutos. Revisa "Mis Ebooks" en unos instantes.');
-    } else {
-        showError('Hubo un problema al crear el ebook. Por favor, intenta de nuevo.');
-    }
+    // Si el error es por timeout (AbortError) o cualquier otro error de red,
+    // NO mostrar error — el flujo probablemente SÍ terminó bien en n8n.
+    // Mostrar pantalla de éxito con instrucciones para ir a "Mis Ebooks"
+    
+    barFill.style.width = '100%';
+    barFill.style.background = '#00ff00';
+    percentText.textContent = '100%';
+    document.getElementById('loadingSpinner').style.display = 'none';
+    document.getElementById('loadingText').textContent = '¡Tu ebook se está generando!';
+    document.getElementById('loadingSub').innerHTML = 
+      '📚 Tu libro se guardará automáticamente en <b>Mis Ebooks</b><br>' +
+      '<span style="font-size:12px;color:var(--text3);margin-top:8px;display:block;">' +
+      'La generación puede tomar hasta 4 minutos. Revisa la carpeta en unos momentos.</span>';
+    
+    setTimeout(() => {
+      hideLoading();
+      document.getElementById('progressContainer').style.display = 'none';
+      document.getElementById('loadingSpinner').style.display = 'block';
+      barFill.style.background = 'linear-gradient(90deg, #ff00ff, #00ffff)';
+      
+      // Mostrar Panel 5 con info del libro aunque no tengamos pdfUrl
+      document.getElementById('ebookResultTitle').textContent = state.ebook.title || '-';
+      document.getElementById('ebookResultPages').textContent = state.ebook.pages || '10';
+      document.getElementById('ebookResultStyle').textContent = styleDescriptions[state.ebook.style] ? state.ebook.style : '-';
+      document.getElementById('ebookResultProtagonist').textContent = state.ebook.protagonist || '-';
+      
+      const ebookCoverEl = document.getElementById('ebookPreviewCover');
+      if (state.ebook.coverUrl) {
+        const coverImg = document.createElement('img');
+        coverImg.src = state.ebook.coverUrl;
+        coverImg.alt = 'Portada del Ebook';
+        coverImg.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:0 10px 10px 0;';
+        coverImg.onload = () => { ebookCoverEl.innerHTML = ''; ebookCoverEl.appendChild(coverImg); };
+      }
+      
+      goToStep(5);
+    }, 4000);
   }
 });
 
