@@ -73,7 +73,7 @@ textarea{resize:vertical;min-height:90px}
 .book-preview-card{background:var(--bg3);border:1px solid #ffffff10;border-radius:var(--r);padding:24px;text-align:center}
 .book-preview-card h3{font-family:var(--fd);font-size:14px;margin-bottom:16px;color:var(--text2)}
 
-.mini-book{width:240px;height:320px;margin:0 auto 20px;perspective:800px}
+.mini-book{width:180px;height:240px;margin:0 auto 20px;perspective:800px}
 .mini-book-inner{width:100%;height:100%;position:relative;transform-style:preserve-3d;transform:rotateY(-10deg);transition:.3s}
 .mini-book:hover .mini-book-inner{transform:rotateY(-5deg)}
 .mini-book-cover{position:absolute;width:100%;height:100%;background:linear-gradient(145deg,#2a2520,#1a1815);border-radius:0 8px 8px 0;box-shadow:-3px 3px 15px rgba(0,0,0,.4);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:12px}
@@ -577,6 +577,7 @@ textarea{resize:vertical;min-height:90px}
   <div class="zoom-hint">Click en cualquier sitio para cerrar</div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════
 // CONFIGURACIÓN
@@ -951,6 +952,7 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
     
     state.ebook.pdfUrl = data.pdfUrl || data.pdf_url || null;
     state.ebook.docUrl = data.docUrl || data.doc_url || null;
+    state.ebook.images = data.images || null;
     
     // ¡ÉXITO! Completar barra al 100%
     clearInterval(progressInterval);
@@ -1292,9 +1294,65 @@ function calculateTotal() {
 // PANEL 5: DESCARGAS
 // ═══════════════════════════════════════════════════════════════
 
-document.getElementById('btnDownloadPdf').addEventListener('click', () => {
+document.getElementById('btnDownloadPdf').addEventListener('click', async () => {
+  // Si hay URL directa del PDF, usarla
   if (state.ebook.pdfUrl) {
     window.open(state.ebook.pdfUrl, '_blank');
+    return;
+  }
+  
+  // Si hay imágenes, generar PDF en el navegador
+  if (state.ebook.images && state.ebook.images.length > 0) {
+    const btn = document.getElementById('btnDownloadPdf');
+    btn.innerHTML = '⏳ Generando PDF...';
+    btn.disabled = true;
+    
+    try {
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageWidth = 210;
+      const pageHeight = 297;
+      
+      for (let i = 0; i < state.ebook.images.length; i++) {
+        const imgData = state.ebook.images[i];
+        
+        if (i > 0) pdf.addPage();
+        
+        try {
+          // Descargar imagen como blob
+          const response = await fetch(imgData.url);
+          const blob = await response.blob();
+          const dataUrl = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          });
+          
+          pdf.addImage(dataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
+        } catch(imgErr) {
+          console.error('Error cargando imagen ' + i, imgErr);
+          // Página en blanco con mensaje si falla
+          pdf.setFontSize(14);
+          pdf.text('Imagen no disponible - Página ' + (i + 1), 20, 140);
+        }
+      }
+      
+      pdf.save((state.ebook.title || 'VIVOgift_ebook') + '.pdf');
+      btn.innerHTML = '✅ ¡PDF Descargado!';
+      setTimeout(() => { btn.innerHTML = '📄 Descargar PDF del Ebook'; btn.disabled = false; }, 3000);
+      
+    } catch(err) {
+      console.error('Error generando PDF:', err);
+      showError('Error al generar el PDF. Intenta de nuevo.');
+      btn.innerHTML = '📄 Descargar PDF del Ebook';
+      btn.disabled = false;
+    }
+    return;
+  }
+  
+  // Si hay portada al menos, ofrecer descargarla
+  if (state.ebook.coverUrl) {
+    showError('Las imágenes del ebook aún no están disponibles. Revisa "Mis Ebooks" en Drive.');
   } else {
     showError('El PDF aún no está disponible.');
   }
