@@ -919,27 +919,29 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
   }, 3500); // 1% cada 3.5s → tarda unos 5.8 minutos en llegar al 98%
   
   try {
-    // AUMENTAMOS EL TIMEOUT A 10 MINUTOS (600,000 ms) para darle tiempo a n8n
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 600000); 
-    
-    const response = await fetch(CONFIG.webhooks.ebook, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: controller.signal,
-      body: JSON.stringify({
-        title: state.ebook.title,
-        protagonist: state.ebook.protagonist,
-        description: state.ebook.description,
-        styleDescription: styleDescriptions[state.ebook.style],
-        style: state.ebook.style,
-        age: state.ebook.age,
-        pages: state.ebook.pages,
-        coverUrl: state.ebook.coverUrl
-      })
-    });
-    
-    clearTimeout(timeoutId);
+    // 1. Añade un AbortController con un tiempo de 4 minutos (240000 ms)
+const controller = new AbortController();
+const timeoutId = setTimeout(() => controller.abort(), 240000); 
+
+try {
+  const payload = {
+    title: title,
+    protagonist: protagonist || 'el protagonista',
+    description: description,
+    styleDescription: styleDescriptions[state.ebook.style],
+    style: state.ebook.style
+  };
+
+  const response = await fetch(CONFIG.webhooks.previewCover, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    signal: controller.signal, // <-- IMPORTANTE: Conectar el controlador aquí
+    body: JSON.stringify(payload)
+  });
+  
+  clearTimeout(timeoutId); // Limpiar el timeout si responde a tiempo
+
+  // ... resto del código (leer texto, parsear JSON, etc.)
     
     if (!response.ok) throw new Error('Error del servidor: ' + response.status);
     
