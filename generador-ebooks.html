@@ -301,6 +301,7 @@ textarea{resize:vertical;min-height:90px}
           <div class="input-group">
             <label>Páginas</label>
             <select id="pageCount">
+              <option value="2">🧪 TEST (2 páginas)</option>
               <option value="6">Mini (6)</option>
               <option value="10" selected>Corto (10)</option>
               <option value="15">Mediano (15)</option>
@@ -747,7 +748,7 @@ document.getElementById('btnPreviewCover').addEventListener('click', async () =>
 
   const btnPreview = document.getElementById('btnPreviewCover');
   btnPreview.disabled = true;
-  showLoading('Generando portada mágica...', 'Esto puede tomar 15-30 segundos');
+  showLoading('Generando portada mágica...', 'Atlas Cloud está pintando tu portada. Puede tomar 1-2 minutos.');
   
   try {
     // ── 1. Enviar datos al webhook ──
@@ -762,11 +763,17 @@ document.getElementById('btnPreviewCover').addEventListener('click', async () =>
 
     console.log('[Preview Cover] Enviando payload:', JSON.stringify(payload, null, 2));
 
+    const controller = new AbortController();
+    const coverTimeout = setTimeout(() => controller.abort(), 240000); // 4 minutos para Atlas Cloud
+
     const response = await fetch(CONFIG.webhooks.previewCover, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
       body: JSON.stringify(payload)
     });
+    
+    clearTimeout(coverTimeout);
     
     // ── 2. Verificar status HTTP ──
     if (!response.ok) {
