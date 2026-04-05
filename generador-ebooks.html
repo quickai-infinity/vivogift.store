@@ -228,7 +228,7 @@ textarea{resize:vertical;min-height:90px}
   </a>
   <div class="nav-links">
     <a href="/">Inicio</a>
-    <a href="/ebooks">Mis Ebooks</a>
+    <a href="/ebooks.html">Mis Ebooks</a>
     <button class="cart-btn" id="cartBtn">🛒 Carrito (0)</button>
   </div>
 </nav>
@@ -1035,9 +1035,6 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
       }
       
       goToStep(5);
-      
-      // Iniciar polling del manifiesto en Drive
-      pollManifest(state.ebook.title);
     }, 4000);
   }
 });
@@ -1299,13 +1296,13 @@ function calculateTotal() {
 document.getElementById('btnDownloadPdf').addEventListener('click', async () => {
   const btn = document.getElementById('btnDownloadPdf');
   
-  // Si ya tenemos las imágenes guardadas, generar PDF directo
+  // Si ya tenemos imágenes en el estado, generar PDF
   if (state.ebook.images && state.ebook.images.length > 0) {
     await generatePdfFromImages(state.ebook.images);
     return;
   }
   
-  // Si hay pdfUrl directo, abrirlo
+  // Si hay pdfUrl, abrirlo
   if (state.ebook.pdfUrl) {
     window.open(state.ebook.pdfUrl, '_blank');
     return;
@@ -1316,54 +1313,70 @@ document.getElementById('btnDownloadPdf').addEventListener('click', async () => 
   btn.disabled = true;
   
   try {
-    // Buscar manifiesto por nombre del título
     const title = state.ebook.title || '';
+    if (!title) throw new Error('No hay título');
+    
+    // Buscar el manifiesto por su ID en Drive (carpeta pública)
+    // Intentar cargar directamente
     const manifestName = title.replace(/\s+/g, '_') + '_manifest.json';
     
-    // Intentar cargar el manifiesto desde Drive (carpeta ebooks-n8n pública)
-    const searchUrl = `https://www.googleapis.com/drive/v3/files?q=name='${encodeURIComponent(manifestName)}'+and+'1ZQiirhfLa4usDPGnzA9OBrtckcn3kSm0'+in+parents&key=AIzaSyDummy&fields=files(id,name)`;
+    // Como la carpeta es pública, intentar buscar el archivo
+    const searchResp = await fetch(`https://www.googleapis.com/drive/v3/files?q=name%3D'${encodeURIComponent(manifestName)}'+and+'1ZQiirhfLa4usDPGnzA9OBrtckcn3kSm0'+in+parents&fields=files(id)&key=AIzaSyBkfSAqZljwjwtxSqz4K3-CnhGIx_2xp3I`);
     
-    // Como no tenemos API key pública, construimos las URLs manualmente
-    // El patrón de nombres en Drive es: {titulo}_pagina_{N}.png
-    // La portada ya la tenemos en state.ebook.coverUrl
+    if (searchResp.ok) {
+      const searchData = await searchResp.json();
+      if (searchData.files && searchData.files.length > 0) {
+        const manifestId = searchData.files[0].id;
+        const manifestResp = await fetch(`https://drive.google.com/uc?id=${manifestId}&export=download`);
+        if (manifestResp.ok) {
+          const manifest = await manifestResp.json();
+          if (manifest.images && manifest.images.length > 0) {
+            state.ebook.images = manifest.images;
+            await generatePdfFromImages(manifest.images);
+            return;
+          }
+        }
+      }
+    }
     
-    showError('El ebook se está generando en segundo plano. Las imágenes estarán en tu carpeta "ebooks-n8n" de Google Drive. Puedes descargarlas desde ahí.');
-    
+    // Si no encuentra el manifiesto, abrir Drive directamente
+    showError('Abre "Mis Ebooks" para ver tus libros en Google Drive.');
   } catch(err) {
-    showError('No se pudo encontrar el ebook. Revisa la carpeta "ebooks-n8n" en Google Drive.');
+    console.error('Error buscando manifiesto:', err);
+    showError('Abre "Mis Ebooks" para descargar tu libro desde Google Drive.');
   }
   
   btn.innerHTML = '📄 Descargar PDF del Ebook';
   btn.disabled = false;
 });
 
-// Función para generar PDF desde array de imágenes
+// Generar PDF desde array de imágenes con jsPDF
 async function generatePdfFromImages(images) {
   const btn = document.getElementById('btnDownloadPdf');
-  btn.innerHTML = '⏳ Generando PDF...';
+  btn.innerHTML = '⏳ Generando PDF... 0/' + images.length;
   btn.disabled = true;
   
   try {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const pageWidth = 210;
-    const pageHeight = 297;
+    const pw = 210, ph = 297;
     
     for (let i = 0; i < images.length; i++) {
+      btn.innerHTML = '⏳ Generando PDF... ' + (i+1) + '/' + images.length;
       if (i > 0) pdf.addPage();
       
       try {
-        const response = await fetch(images[i].url);
-        const blob = await response.blob();
-        const dataUrl = await new Promise((resolve) => {
+        const resp = await fetch(images[i].url);
+        const blob = await resp.blob();
+        const dataUrl = await new Promise(r => {
           const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
+          reader.onloadend = () => r(reader.result);
           reader.readAsDataURL(blob);
         });
-        pdf.addImage(dataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
-      } catch(imgErr) {
+        pdf.addImage(dataUrl, 'JPEG', 0, 0, pw, ph);
+      } catch(e) {
         pdf.setFontSize(14);
-        pdf.text('Imagen no disponible - Página ' + (i + 1), 20, 140);
+        pdf.text('Página ' + (i+1) + ' no disponible', 20, 140);
       }
     }
     
@@ -1394,56 +1407,7 @@ document.getElementById('btnDownloadCoverFinal').addEventListener('click', () =>
   downloadCoverImage('btnDownloadCoverFinal');
 });
 
-// ═══════════════════════════════════════════════════════════════
-// POLLING DEL MANIFIESTO — Busca el JSON del ebook en Drive
-// ═══════════════════════════════════════════════════════════════
-
-async function pollManifest(title) {
-  if (!title) return;
-  
-  const manifestName = title.replace(/\s+/g, '_') + '_manifest.json';
-  const folderUrl = 'https://lh3.googleusercontent.com/d/';
-  
-  let attempts = 0;
-  const maxAttempts = 40; // 40 intentos x 15s = 10 minutos
-  
-  const poll = setInterval(async () => {
-    attempts++;
-    if (attempts > maxAttempts) {
-      clearInterval(poll);
-      return;
-    }
-    
-    try {
-      // Intentar cargar el manifiesto desde el webhook de consulta
-      const resp = await fetch(CONFIG.webhooks.previewCover.replace('preview-cover', 'manifest/' + encodeURIComponent(manifestName)), {
-        method: 'GET'
-      });
-      
-      if (resp.ok) {
-        const manifest = await resp.json();
-        if (manifest.images && manifest.images.length > 0) {
-          state.ebook.images = manifest.images;
-          clearInterval(poll);
-          
-          // Actualizar botón para indicar que está listo
-          const btn = document.getElementById('btnDownloadPdf');
-          btn.innerHTML = '📄 ¡PDF Listo! Descargar';
-          btn.style.background = '#00ff00';
-          btn.style.color = '#000';
-          setTimeout(() => {
-            btn.style.background = '';
-            btn.style.color = '';
-          }, 5000);
-        }
-      }
-    } catch(e) {
-      // Silenciar errores de polling
-    }
-  }, 15000); // Cada 15 segundos
-}
-
-// Función de descarga de portada
+// Función reutilizable para descargar portada
 function downloadCoverImage(btnId) {
   const coverBase64 = state.ebook.coverUrl;
   if (!coverBase64) return;
