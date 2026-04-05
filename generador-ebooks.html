@@ -953,6 +953,16 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
     state.ebook.pdfUrl = data.pdfUrl || data.pdf_url || null;
     state.ebook.docUrl = data.docUrl || data.doc_url || null;
     
+    // Cargar imágenes del manifiesto si vienen en la respuesta
+    if (data.images) {
+      try {
+        const imgs = typeof data.images === 'string' ? JSON.parse(data.images) : data.images;
+        if (Array.isArray(imgs) && imgs.length > 0) {
+          state.ebook.images = imgs;
+        }
+      } catch(e) { console.warn('No se pudieron parsear imágenes:', e); }
+    }
+    
     // ¡ÉXITO! Completar barra al 100%
     clearInterval(progressInterval);
     barFill.style.width = '100%';
@@ -1296,19 +1306,19 @@ function calculateTotal() {
 document.getElementById('btnDownloadPdf').addEventListener('click', async () => {
   const btn = document.getElementById('btnDownloadPdf');
   
-  // Si ya tenemos imágenes en el estado, generar PDF
+  // OPCIÓN 1: Si tenemos imágenes en el estado, generar PDF en el navegador
   if (state.ebook.images && state.ebook.images.length > 0) {
     await generatePdfFromImages(state.ebook.images);
     return;
   }
   
-  // Si hay pdfUrl, abrirlo
+  // OPCIÓN 2: Si hay pdfUrl de Drive, abrir directamente
   if (state.ebook.pdfUrl) {
     window.open(state.ebook.pdfUrl, '_blank');
     return;
   }
   
-  // Intentar buscar el manifiesto en Drive
+  // OPCIÓN 3: Buscar el PDF real en Drive por nombre
   btn.innerHTML = '⏳ Buscando ebook...';
   btn.disabled = true;
   
@@ -1316,33 +1326,49 @@ document.getElementById('btnDownloadPdf').addEventListener('click', async () => 
     const title = state.ebook.title || '';
     if (!title) throw new Error('No hay título');
     
-    // Buscar el manifiesto por su ID en Drive (carpeta pública)
-    // Intentar cargar directamente
-    const manifestName = title.replace(/\s+/g, '_') + '_manifest.json';
+    const pdfName = title.replace(/\s+/g, '_') + '.pdf';
     
-    // Como la carpeta es pública, intentar buscar el archivo
-    const searchResp = await fetch(`https://www.googleapis.com/drive/v3/files?q=name%3D'${encodeURIComponent(manifestName)}'+and+'1ZQiirhfLa4usDPGnzA9OBrtckcn3kSm0'+in+parents&fields=files(id)&key=AIzaSyBkfSAqZljwjwtxSqz4K3-CnhGIx_2xp3I`);
+    const searchResp = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=name%3D'${encodeURIComponent(pdfName)}'+and+'1ZQiirhfLa4usDPGnzA9OBrtckcn3kSm0'+in+parents&fields=files(id,webViewLink,webContentLink)&key=AIzaSyBkfSAqZljwjwtxSqz4K3-CnhGIx_2xp3I`
+    );
     
     if (searchResp.ok) {
       const searchData = await searchResp.json();
       if (searchData.files && searchData.files.length > 0) {
-        const manifestId = searchData.files[0].id;
-        const manifestResp = await fetch(`https://drive.google.com/uc?id=${manifestId}&export=download`);
-        if (manifestResp.ok) {
-          const manifest = await manifestResp.json();
-          if (manifest.images && manifest.images.length > 0) {
-            state.ebook.images = manifest.images;
-            await generatePdfFromImages(manifest.images);
-            return;
-          }
-        }
+        const file = searchData.files[0];
+        const downloadUrl = file.webContentLink || `https://drive.google.com/uc?id=${file.id}&export=download`;
+        window.open(downloadUrl, '_blank');
+        btn.innerHTML = '✅ ¡Descarga iniciada!';
+        setTimeout(() => { btn.innerHTML = '📄 Descargar PDF del Ebook'; btn.disabled = false; }, 3000);
+        return;
       }
     }
     
-    // Si no encuentra el manifiesto, abrir Drive directamente
+    // Si no encuentra PDF, intentar con las imágenes individuales de Drive
+    const imgSearch = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q='1ZQiirhfLa4usDPGnzA9OBrtckcn3kSm0'+in+parents+and+name+contains+'${encodeURIComponent(title.replace(/\s+/g, '_'))}_pagina'+and+mimeType+contains+'image'&fields=files(id,name)&orderBy=name&key=AIzaSyBkfSAqZljwjwtxSqz4K3-CnhGIx_2xp3I`
+    );
+    
+    if (imgSearch.ok) {
+      const imgData = await imgSearch.json();
+      if (imgData.files && imgData.files.length > 0) {
+        const images = imgData.files
+          .sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true}))
+          .map(f => ({ url: 'https://lh3.googleusercontent.com/d/' + f.id, type: 'page' }));
+        
+        if (state.ebook.coverUrl) {
+          images.unshift({ url: state.ebook.coverUrl, type: 'cover' });
+        }
+        
+        state.ebook.images = images;
+        await generatePdfFromImages(images);
+        return;
+      }
+    }
+    
     showError('Abre "Mis Ebooks" para ver tus libros en Google Drive.');
   } catch(err) {
-    console.error('Error buscando manifiesto:', err);
+    console.error('Error buscando PDF:', err);
     showError('Abre "Mis Ebooks" para descargar tu libro desde Google Drive.');
   }
   
@@ -1366,15 +1392,37 @@ async function generatePdfFromImages(images) {
       if (i > 0) pdf.addPage();
       
       try {
-        const resp = await fetch(images[i].url);
-        const blob = await resp.blob();
-        const dataUrl = await new Promise(r => {
-          const reader = new FileReader();
-          reader.onloadend = () => r(reader.result);
-          reader.readAsDataURL(blob);
+        // Intentar cargar la imagen usando un elemento img (evita CORS)
+        const dataUrl = await new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            resolve(canvas.toDataURL('image/jpeg', 0.92));
+          };
+          img.onerror = () => reject(new Error('No se pudo cargar imagen ' + (i+1)));
+          
+          // Usar URL directa de Google Drive para imágenes públicas
+          let url = images[i].url;
+          if (url.includes('lh3.googleusercontent.com')) {
+            // Ya es URL directa, añadir parámetro de tamaño
+            url = url + '=s1600';
+          } else if (url.includes('drive.google.com/uc')) {
+            // OK, es URL de descarga directa
+          }
+          img.src = url;
+          
+          // Timeout de 15 segundos por imagen
+          setTimeout(() => reject(new Error('Timeout imagen ' + (i+1))), 15000);
         });
+        
         pdf.addImage(dataUrl, 'JPEG', 0, 0, pw, ph);
       } catch(e) {
+        console.warn('Imagen ' + (i+1) + ' falló:', e.message);
         pdf.setFontSize(14);
         pdf.text('Página ' + (i+1) + ' no disponible', 20, 140);
       }
