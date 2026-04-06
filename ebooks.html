@@ -183,7 +183,7 @@ async function downloadPdf(idx, btn) {
         let originalUrl = images[i].url;
         let imageId = null;
 
-        // Extraer el ID de Drive de los distintos formatos de Google
+        // Extraer el ID exacto del Drive
         const m1 = originalUrl.match(/lh3\.googleusercontent\.com\/d\/([^?=\/]+)/);
         const m2 = originalUrl.match(/id=([a-zA-Z0-9_-]+)/);
         const m3 = originalUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
@@ -192,18 +192,14 @@ async function downloadPdf(idx, btn) {
         else if (m2) imageId = m2[1];
         else if (m3) imageId = m3[1];
 
-        // Armamos la URL de descarga directa
-        let finalUrl = imageId ? `https://drive.google.com/uc?id=${imageId}&export=download` : originalUrl;
+        // Usamos el API de Thumbnail de Google que NO bloquea por CORS si la imagen es pública
+        let finalUrl = imageId ? `https://drive.google.com/thumbnail?id=${imageId}&sz=w1600` : originalUrl;
 
-        // 🚀 EL TRUCO: Pasamos por el Proxy CORS
-        const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(finalUrl);
-
-        // Descargamos el archivo como datos binarios (Blob) puros
-        const response = await fetch(proxyUrl);
-        if (!response.ok) throw new Error('Error en proxy de red');
+        // Fetch directo sin proxies mediocres
+        const response = await fetch(finalUrl);
+        if (!response.ok) throw new Error('Error al descargar imagen desde Drive');
         const blob = await response.blob();
 
-        // Convertimos el Blob a Base64 sin usar Canvas (evitando el bloqueo CORS)
         const dataUrl = await new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onloadend = () => resolve(reader.result);

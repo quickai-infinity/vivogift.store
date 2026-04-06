@@ -1399,55 +1399,66 @@ async function generatePdfFromImages(images) {
   btn.innerHTML = '⏳ Generando PDF... 0/' + images.length;
   btn.disabled = true;
   
+  async function downloadPdf(idx, btn) {
+  const ebook = getEbooks()[idx];
+  const images = ebook.images || [];
+  if (!images.length) { showError('Sin imágenes.'); return; }
+
+  const orig = btn.innerHTML;
+  btn.disabled = true; 
+  btn.innerHTML = '⏳ 0/' + images.length;
+
   try {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const pw = 210, ph = 297;
-    
+
     for (let i = 0; i < images.length; i++) {
-      btn.innerHTML = '⏳ Generando PDF... ' + (i+1) + '/' + images.length;
+      btn.innerHTML = '⏳ ' + (i+1) + '/' + images.length;
       if (i > 0) pdf.addPage();
       
       try {
         let originalUrl = images[i].url;
         let imageId = null;
-        
-        const driveIdMatch = originalUrl.match(/id=([a-zA-Z0-9_-]+)/) || originalUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-        if (driveIdMatch) imageId = driveIdMatch[1];
-        
-        let finalUrl = imageId ? `https://drive.google.com/uc?id=${imageId}&export=download` : originalUrl;
-        
-        // NUEVO PROXY: AllOrigins (No bloquea descargas de Drive)
-        const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(finalUrl);
-        
-        const response = await fetch(proxyUrl);
-        if (!response.ok) throw new Error('Error en proxy CORS');
+
+        // Extraer el ID exacto del Drive
+        const m1 = originalUrl.match(/lh3\.googleusercontent\.com\/d\/([^?=\/]+)/);
+        const m2 = originalUrl.match(/id=([a-zA-Z0-9_-]+)/);
+        const m3 = originalUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+
+        if (m1) imageId = m1[1];
+        else if (m2) imageId = m2[1];
+        else if (m3) imageId = m3[1];
+
+        // Usamos el API de Thumbnail de Google que NO bloquea por CORS si la imagen es pública
+        let finalUrl = imageId ? `https://drive.google.com/thumbnail?id=${imageId}&sz=w1600` : originalUrl;
+
+        // Fetch directo sin proxies mediocres
+        const response = await fetch(finalUrl);
+        if (!response.ok) throw new Error('Error al descargar imagen desde Drive');
         const blob = await response.blob();
-        
+
         const dataUrl = await new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onloadend = () => resolve(reader.result);
           reader.onerror = () => reject(new Error('Error leyendo blob'));
           reader.readAsDataURL(blob);
         });
-        
+
         pdf.addImage(dataUrl, 'JPEG', 0, 0, pw, ph);
       } catch(e) {
-        console.warn('Imagen ' + (i+1) + ' falló:', e.message);
+        console.warn('Fallo en página', i+1, e);
         pdf.setFontSize(14);
         pdf.text('Página ' + (i+1) + ' no disponible', 20, 140);
       }
     }
     
-    const docTitle = typeof state !== 'undefined' && state.ebook && state.ebook.title ? state.ebook.title : 'VIVOgift_Ebook';
-    pdf.save(docTitle.replace(/\s+/g, '_') + '.pdf');
-    
-    btn.innerHTML = '✅ ¡PDF Descargado!';
-    setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 3000);
+    pdf.save((ebook.title || 'ebook').replace(/\s+/g, '_') + '.pdf');
+    btn.innerHTML = '✅ ¡Listo!';
+    setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 3000);
   } catch(err) {
-    console.error('Error generando PDF:', err);
-    if(typeof showError === 'function') showError('Error al generar el PDF.');
-    btn.innerHTML = originalText;
+    showError('Error al generar PDF.'); 
+    btn.innerHTML = orig; 
     btn.disabled = false;
   }
 }
