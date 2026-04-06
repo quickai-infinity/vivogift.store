@@ -960,9 +960,42 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
     }, 2000);
     
   } catch (error) {
-    console.error('[Crear Ebook] Error:', error);
+    console.error('[Crear Ebook] Tiempo de espera agotado:', error);
     clearInterval(progressInterval);
     
+    // 1. CAMBIO VISUAL: Mensaje de procesamiento en segundo plano
+    document.getElementById('loadingSpinner').style.display = 'none';
+    document.getElementById('loadingText').textContent = '🎨 Ilustrando en alta definición...';
+    document.getElementById('loadingSub').innerHTML = 
+      'Debido a la alta calidad de las ilustraciones, el proceso continúa en nuestro servidor.<br>' +
+      '<b>Tu libro aparecerá en "Mis Ebooks" en aproximadamente 5-10 minutos.</b><br>' +
+      'Puedes seguir navegando o cerrar esta ventana sin problemas.';
+    
+    // Alargar la barra visualmente al final
+    barFill.style.width = '100%';
+    barFill.style.background = 'var(--lime)';
+    percentText.textContent = 'PROCESANDO...';
+
+    // 2. CAMBIO PROFESIONAL: Rediseñar el Panel 5 para este caso
+    setTimeout(() => {
+       hideLoading();
+       // Modificamos el Panel 5 dinámicamente para que no sea un "éxito falso"
+       document.getElementById('panel5').innerHTML = `
+         <div class="confirm-panel">
+           <div class="confirm-icon">⏳</div>
+           <h2>¡Tu historia está en camino!</h2>
+           <p>Estamos generando las ilustraciones y el PDF final con máxima calidad.</p>
+           <div class="order-details" style="text-align:center; padding: 20px;">
+             <p>Este proceso toma unos minutos. Encontrarás tu libro listo para descargar en la sección de <b>Mis Ebooks</b> muy pronto.</p>
+           </div>
+           <div style="display:flex; gap:12px; justify-content:center; margin-top:24px;">
+             <a href="/ebooks.html" class="btn-download-pdf" style="text-decoration:none; background:var(--lime); color:var(--bg); font-weight:800; padding:14px 24px; border-radius:8px;">📁 Ir a Mis Ebooks</a>
+             <button onclick="location.reload()" class="btn-download-doc" style="padding:14px 24px; border-radius:8px; border:1.5px solid #ffffff20; background:transparent; color:var(--text); cursor:pointer;">✨ Crear otro Ebook</button>
+           </div>
+         </div>
+       `;
+       goToStep(5);
+    }, 6000);// Dejamos el mensaje de "procesando" unos segundos para que se lea bien 
     barFill.style.width = '100%';
     barFill.style.background = '#00ff00';
     percentText.textContent = '100%';
