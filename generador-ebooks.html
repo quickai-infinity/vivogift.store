@@ -243,7 +243,6 @@ textarea{resize:vertical;min-height:90px}
     <div class="step-dot" data-step="5"></div>
   </div>
 
-  <!-- ═══════════ PANEL 1: CREAR ═══════════ -->
   <div class="panel active" id="panel1">
     <div class="create-panel">
       
@@ -331,7 +330,6 @@ textarea{resize:vertical;min-height:90px}
     </div>
   </div>
 
-  <!-- ═══════════ PANEL 2: FORMATO ═══════════ -->
   <div class="panel" id="panel2">
     <h2 class="section-title">¿Cómo quieres tu libro?</h2>
     <p class="section-sub">Elige el formato perfecto para regalar o disfrutar</p>
@@ -371,7 +369,6 @@ textarea{resize:vertical;min-height:90px}
     </div>
   </div>
 
-  <!-- ═══════════ PANEL 3: REGALO ═══════════ -->
   <div class="panel" id="panel3">
     <h2 class="section-title">🎁 Personaliza tu Regalo</h2>
     <p class="section-sub">Haz que este regalo sea inolvidable</p>
@@ -449,7 +446,6 @@ textarea{resize:vertical;min-height:90px}
     </div>
   </div>
 
-  <!-- ═══════════ PANEL 4: CHECKOUT ═══════════ -->
   <div class="panel" id="panel4">
     <h2 class="section-title">💳 Finalizar Compra</h2>
 
@@ -501,16 +497,13 @@ textarea{resize:vertical;min-height:90px}
     </div>
   </div>
 
-  <!-- ═══════════ PANEL 5: CONFIRMACIÓN + VISTA PREVIA EBOOK ═══════════ -->
   <div class="panel" id="panel5">
     <div class="confirm-panel">
       <div class="confirm-icon">🎉</div>
       <h2>¡Tu Ebook está Listo!</h2>
       <p>Tu libro ilustrado ha sido creado con éxito. Aquí tienes tu vista previa y descargas.</p>
       
-      <!-- VISTA PREVIA DEL EBOOK GENERADO -->
       <div style="display:flex;gap:24px;justify-content:center;align-items:flex-start;flex-wrap:wrap;margin:24px 0 32px;">
-        <!-- Portada generada -->
         <div style="text-align:center;">
           <div id="ebookPreviewCover" style="width:200px;height:280px;margin:0 auto 12px;background:linear-gradient(145deg,#2a2520,#1a1815);border-radius:0 10px 10px 0;box-shadow:-4px 4px 20px rgba(0,0,0,.5);overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;">
             <span style="color:var(--text2);font-size:12px;">Portada</span>
@@ -518,7 +511,6 @@ textarea{resize:vertical;min-height:90px}
           <p style="font-size:11px;color:var(--text2);font-family:var(--fd);">Click para ampliar</p>
         </div>
         
-        <!-- Info del libro -->
         <div style="text-align:left;max-width:300px;">
           <h3 style="font-family:var(--fd);font-size:18px;font-weight:800;margin-bottom:8px;color:var(--lime);" id="ebookResultTitle">-</h3>
           <div style="font-size:13px;color:var(--text2);line-height:1.8;">
@@ -529,7 +521,6 @@ textarea{resize:vertical;min-height:90px}
         </div>
       </div>
 
-      <!-- Detalles del pedido (para formato gift) -->
       <div class="order-details" id="orderDetailsSection" style="display:none;">
         <h4>📦 Detalles del Pedido #<span id="orderNumber">VG-12345</span></h4>
         <div class="order-row"><span>Libro:</span><span id="confirmTitle">-</span></div>
@@ -537,14 +528,12 @@ textarea{resize:vertical;min-height:90px}
         <div class="order-row"><span>Entrega estimada:</span><span id="confirmDelivery">5-7 días hábiles</span></div>
       </div>
       
-      <!-- Botones de descarga -->
       <div class="download-buttons">
         <button class="btn-download-pdf" id="btnDownloadPdf">📄 Descargar PDF del Ebook</button>
         <button class="btn-download-doc" id="btnDownloadDoc">📝 Abrir en Google Docs</button>
         <button class="btn-generate" id="btnDownloadCoverFinal" style="max-width:240px;background:var(--bg4);border:1px solid #ffffff20;color:var(--text);font-size:12px;">⬇️ Descargar Portada</button>
       </div>
       
-      <!-- Botón crear otro -->
       <div style="margin-top:32px;">
         <button class="btn-back" onclick="location.reload()" style="border-color:var(--lime);color:var(--lime);">✨ Crear otro Ebook</button>
       </div>
@@ -553,7 +542,6 @@ textarea{resize:vertical;min-height:90px}
 
 </main>
 
-<!-- LOADING -->
 <div class="loading-overlay" id="loadingOverlay">
   <div class="loading-spinner" id="loadingSpinner"></div>
   <div class="loading-text" id="loadingText">Creando tu ebook mágico...</div>
@@ -567,10 +555,8 @@ textarea{resize:vertical;min-height:90px}
   </div>
 </div>
 
-<!-- ERROR TOAST -->
 <div class="error-toast" id="errorToast"></div>
 
-<!-- ZOOM MODAL para ver portada en grande -->
 <div class="zoom-overlay" id="zoomOverlay">
   <button class="zoom-close" id="zoomClose">✕</button>
   <img id="zoomImage" src="" alt="Portada ampliada">
@@ -614,7 +600,8 @@ let state = {
     pages: 10,
     coverUrl: null,
     docUrl: null,
-    pdfUrl: null
+    pdfUrl: null,
+    images: []
   },
   gift: {
     audioBlob: null,
@@ -629,9 +616,7 @@ let state = {
 };
 
 // ═══════════════════════════════════════════════════════════════
-// DESCRIPCIONES DE ESTILOS VISUALES (en español para el mercado ES)
-// Estos textos se envían al webhook como "styleDescription"
-// para que el LLM Chain genere el prompt de imagen correctamente
+// DESCRIPCIONES DE ESTILOS VISUALES 
 // ═══════════════════════════════════════════════════════════════
 
 const styleDescriptions = {
@@ -694,14 +679,12 @@ function goToStep(step) {
 const zoomOverlay = document.getElementById('zoomOverlay');
 const zoomImage   = document.getElementById('zoomImage');
 
-// Click en la portada mini-book → abrir zoom
 document.getElementById('miniBookCover').addEventListener('click', () => {
-  if (!state.ebook.coverUrl) return; // Solo si hay portada generada
+  if (!state.ebook.coverUrl) return; 
   zoomImage.src = state.ebook.coverUrl;
   zoomOverlay.classList.add('active');
 });
 
-// Cerrar zoom: click en overlay, botón X, o tecla Escape
 zoomOverlay.addEventListener('click', (e) => {
   if (e.target === zoomOverlay || e.target.id === 'zoomClose') {
     zoomOverlay.classList.remove('active');
@@ -728,13 +711,7 @@ document.querySelectorAll('.style-option').forEach(opt => {
 });
 
 // ═══════════════════════════════════════════════════════════════
-// PANEL 1: PREVIEW DE PORTADA — CORREGIDO
-//
-// Cambios clave:
-// 1. Envía "styleDescription" con la descripción completa del estilo
-// 2. Lee la respuesta como TEXTO primero, luego parsea JSON
-// 3. Tiene fallback si la respuesta no es JSON estándar
-// 4. Crea la imagen con manejo de errores de carga
+// PANEL 1: PREVIEW DE PORTADA
 // ═══════════════════════════════════════════════════════════════
 
 document.getElementById('btnPreviewCover').addEventListener('click', async () => {
@@ -752,8 +729,6 @@ document.getElementById('btnPreviewCover').addEventListener('click', async () =>
   showLoading('Generando portada mágica...', 'Atlas Cloud está pintando tu portada. Puede tomar 1-2 minutos.');
   
   try {
-    // ── 1. Enviar datos al webhook ──
-    // IMPORTANTE: enviamos "styleDescription" que es lo que lee el LLM Chain en n8n
     const payload = {
       title: title,
       protagonist: protagonist || 'el protagonista',
@@ -762,10 +737,8 @@ document.getElementById('btnPreviewCover').addEventListener('click', async () =>
       style: state.ebook.style
     };
 
-    console.log('[Preview Cover] Enviando payload:', JSON.stringify(payload, null, 2));
-
     const controller = new AbortController();
-    const coverTimeout = setTimeout(() => controller.abort(), 240000); // 4 minutos para Atlas Cloud
+    const coverTimeout = setTimeout(() => controller.abort(), 240000); 
 
     const response = await fetch(CONFIG.webhooks.previewCover, {
       method: 'POST',
@@ -776,82 +749,52 @@ document.getElementById('btnPreviewCover').addEventListener('click', async () =>
     
     clearTimeout(coverTimeout);
     
-    // ── 2. Verificar status HTTP ──
     if (!response.ok) {
-      const errBody = await response.text().catch(() => '');
-      console.error('[Preview Cover] HTTP Error:', response.status, errBody);
       throw new Error('Error del servidor (HTTP ' + response.status + ')');
     }
 
-    // ── 3. Leer como TEXTO primero (evita el crash de .json() con respuestas vacías o malformadas) ──
     const rawText = await response.text();
-    
-    console.log('[Preview Cover] Respuesta recibida, longitud:', rawText.length, 'chars');
-    console.log('[Preview Cover] Primeros 100 chars:', rawText.substring(0, 100));
-
     if (!rawText || rawText.trim().length === 0) {
       throw new Error('El servidor devolvió una respuesta vacía');
     }
 
-    // ── 4. Parsear JSON de forma segura ──
     let data;
     try {
       data = JSON.parse(rawText);
     } catch (parseErr) {
-      console.error('[Preview Cover] JSON.parse falló:', parseErr.message);
-      console.error('[Preview Cover] Respuesta raw (primeros 300 chars):', rawText.substring(0, 300));
-      
-      // FALLBACK: ¿Es directamente un string base64?
       if (rawText.length > 1000 && !rawText.includes('<')) {
         const b64 = rawText.trim();
-        data = {
-          coverUrl: b64.startsWith('data:image') ? b64 : ('data:image/png;base64,' + b64)
-        };
-        console.log('[Preview Cover] Fallback: tratando respuesta como base64 directo');
+        data = { coverUrl: b64.startsWith('data:image') ? b64 : ('data:image/png;base64,' + b64) };
       } else {
         throw new Error('Respuesta del servidor no es JSON válido');
       }
     }
 
-    // ── 5. Extraer la URL de imagen ──
-    const imgUrl = data.coverUrl 
-                || data.imageUrl 
-                || data.url 
-                || (Array.isArray(data) ? data[0]?.url : null);
+    const imgUrl = data.coverUrl || data.imageUrl || data.url || (Array.isArray(data) ? data[0]?.url : null);
     
     if (!imgUrl) {
-      console.error('[Preview Cover] No se encontró URL en la respuesta:', JSON.stringify(data).substring(0, 500));
       throw new Error('La respuesta no contiene una imagen válida');
     }
 
-    console.log('[Preview Cover] URL de imagen obtenida, longitud:', imgUrl.length);
-
-    // ── 6. Guardar en estado ──
     state.ebook.coverUrl = imgUrl;
 
-    // ── 7. Mostrar la imagen en el mini-book con manejo de errores ──
     const coverEl = document.getElementById('miniBookCover');
-    
     const img = document.createElement('img');
     img.alt = 'Portada';
     img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:0 8px 8px 0';
     
     img.onload = () => {
-      console.log('[Preview Cover] ✅ Imagen cargada correctamente');
       coverEl.innerHTML = '';
       coverEl.appendChild(img);
     };
     
     img.onerror = (e) => {
-      console.error('[Preview Cover] ❌ Error al cargar la imagen en el DOM:', e);
       coverEl.innerHTML = '<span style="color:#ff6b6b;font-size:11px;padding:10px">Error al mostrar la imagen. Intenta de nuevo.</span>';
     };
     
-    // Asignar src DESPUÉS de configurar onload/onerror
     img.src = imgUrl;
-    document.getElementById('btnDownloadCover').style.display = 'block'; // Mostrar botón
+    document.getElementById('btnDownloadCover').style.display = 'block'; 
   } catch (error) {
-    console.error('[Preview Cover] Error completo:', error);
     showError(error.message || 'Error al generar la portada. Intenta de nuevo.');
   } finally {
     hideLoading();
@@ -880,7 +823,6 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
   state.ebook.pages       = parseInt(document.getElementById('pageCount').value);
   state.ebook.age         = document.getElementById('childAge').value;
 
-  // Mostrar loading con barra
   document.getElementById('loadingText').textContent = 'Creando tu ebook mágico...';
   document.getElementById('loadingSub').textContent = 'Diseñando el personaje protagonista...';
   document.getElementById('loadingOverlay').classList.add('active');
@@ -889,7 +831,6 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
   const barFill = document.getElementById('progressBarFill');
   const percentText = document.getElementById('progressPercent');
   
-  // Mensajes progresivos según la etapa de generación
   const progressMessages = [
     { at: 5,  text: '🎨 Diseñando el personaje protagonista...',    sub: 'La IA está creando la ficha visual' },
     { at: 15, text: '📝 Escribiendo la historia con diálogos...',    sub: 'Creando la narrativa página por página' },
@@ -897,8 +838,8 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
     { at: 35, text: '🖌️ Ilustrando páginas...',                     sub: 'Cada página es una obra de arte única' },
     { at: 50, text: '🖌️ Más de la mitad ilustrada...',              sub: 'Las páginas están quedando increíbles' },
     { at: 65, text: '💬 Añadiendo burbujas de diálogo...',           sub: 'Los personajes cobran vida' },
-    { at: 75, text: '📤 Subiendo imágenes a la nube...',             sub: 'Guardando tus ilustraciones en Drive' },
-    { at: 85, text: '📄 Generando el PDF final...',                  sub: 'Ensamblando tu ebook completo' },
+    { at: 75, text: '📤 Subiendo imágenes a Supabase...',             sub: 'Guardando tus ilustraciones de forma segura' },
+    { at: 85, text: '📄 Preparando los archivos finales...',          sub: 'Ensamblando tu ebook completo' },
     { at: 90, text: '✨ Últimos retoques...',                        sub: 'Tu libro está casi listo' },
   ];
   
@@ -912,19 +853,17 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
       barFill.style.width = currentProgress + '%';
       percentText.textContent = currentProgress + '%';
       
-      // Actualizar mensajes según progreso
       const msg = progressMessages.find(m => m.at === currentProgress);
       if (msg) {
         document.getElementById('loadingText').textContent = msg.text;
         document.getElementById('loadingSub').textContent = msg.sub;
       }
     }
-  }, 2500); // 1% cada 2.5 segundos → 90% en ~3.75 minutos
+  }, 2500); 
   
   try {
-    // AbortController con timeout de 5 minutos (el flujo tarda ~3-4 min)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minutos
+    const timeoutId = setTimeout(() => controller.abort(), 300000); 
     
     const response = await fetch(CONFIG.webhooks.ebook, {
       method: 'POST',
@@ -950,10 +889,8 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
     if (!rawText) throw new Error('Respuesta vacía');
     const data = JSON.parse(rawText);
     
-    state.ebook.pdfUrl = data.pdfUrl || data.pdf_url || null;
     state.ebook.docUrl = data.docUrl || data.doc_url || null;
     
-    // Cargar imágenes del manifiesto si vienen en la respuesta
     if (data.images) {
       try {
         const imgs = typeof data.images === 'string' ? JSON.parse(data.images) : data.images;
@@ -962,8 +899,27 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
         }
       } catch(e) { console.warn('No se pudieron parsear imágenes:', e); }
     }
+
+    // 🚀 NUEVO: Guardar en localStorage para que aparezca instantáneamente en "Mis Ebooks"
+    if (state.ebook.images && state.ebook.images.length > 0) {
+      try {
+        const savedEbooks = JSON.parse(localStorage.getItem('vivogift_ebooks') || '[]');
+        savedEbooks.unshift({
+          title: state.ebook.title,
+          style: state.ebook.style,
+          coverUrl: state.ebook.coverUrl,
+          images: state.ebook.images,
+          docUrl: state.ebook.docUrl,
+          createdAt: new Date().toISOString()
+        });
+        // Límite de 50 libros guardados para no saturar memoria
+        if (savedEbooks.length > 50) savedEbooks.length = 50;
+        localStorage.setItem('vivogift_ebooks', JSON.stringify(savedEbooks));
+      } catch(e) { 
+        console.warn('Error guardando en local:', e); 
+      }
+    }
     
-    // ¡ÉXITO! Completar barra al 100%
     clearInterval(progressInterval);
     barFill.style.width = '100%';
     barFill.style.background = '#00ff00';
@@ -978,7 +934,6 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
       document.getElementById('loadingSpinner').style.display = 'block';
       barFill.style.background = 'linear-gradient(90deg, #ff00ff, #00ffff)';
       
-      // Mostrar vista previa del ebook en Panel 5
       document.getElementById('ebookResultTitle').textContent = state.ebook.title || '-';
       document.getElementById('ebookResultPages').textContent = state.ebook.pages || '10';
       document.getElementById('ebookResultStyle').textContent = styleDescriptions[state.ebook.style] ? state.ebook.style : '-';
@@ -1009,10 +964,6 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
     console.error('[Crear Ebook] Error:', error);
     clearInterval(progressInterval);
     
-    // Si el error es por timeout (AbortError) o cualquier otro error de red,
-    // NO mostrar error — el flujo probablemente SÍ terminó bien en n8n.
-    // Mostrar pantalla de éxito con instrucciones para ir a "Mis Ebooks"
-    
     barFill.style.width = '100%';
     barFill.style.background = '#00ff00';
     percentText.textContent = '100%';
@@ -1021,7 +972,7 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
     document.getElementById('loadingSub').innerHTML = 
       '📚 Tu libro se guardará automáticamente en <b>Mis Ebooks</b><br>' +
       '<span style="font-size:12px;color:var(--text3);margin-top:8px;display:block;">' +
-      'La generación puede tomar hasta 4 minutos. Revisa la carpeta en unos momentos.</span>';
+      'La generación puede tomar hasta 4 minutos. Revisa la página en unos momentos.</span>';
     
     setTimeout(() => {
       hideLoading();
@@ -1029,7 +980,6 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
       document.getElementById('loadingSpinner').style.display = 'block';
       barFill.style.background = 'linear-gradient(90deg, #ff00ff, #00ffff)';
       
-      // Mostrar Panel 5 con info del libro aunque no tengamos pdfUrl
       document.getElementById('ebookResultTitle').textContent = state.ebook.title || '-';
       document.getElementById('ebookResultPages').textContent = state.ebook.pages || '10';
       document.getElementById('ebookResultStyle').textContent = styleDescriptions[state.ebook.style] ? state.ebook.style : '-';
@@ -1083,12 +1033,10 @@ document.getElementById('btnMagicDesc').addEventListener('click', async () => {
         const data = JSON.parse(rawText);
         textarea.value = data.text || data.output || data.descripcion || rawText;
       } catch {
-        // Si no es JSON, usar el texto directamente
         textarea.value = rawText;
       }
     }
   } catch (err) {
-    console.error('[Descripción IA] Error:', err);
     showError('Error al generar la descripción.');
   }
   
@@ -1171,7 +1119,6 @@ btnRecord.addEventListener('click', async () => {
     }, 1000);
     
   } catch (err) {
-    console.error('Error micrófono:', err);
     showError('No se pudo acceder al micrófono. Permite el acceso.');
   }
 });
@@ -1205,13 +1152,11 @@ document.getElementById('btnUseAudio').addEventListener('click', () => {
   recStatus.textContent = '✅ Audio guardado y listo para usar';
 });
 
-// Dedicatoria
 document.getElementById('dedicatoria').addEventListener('input', function() {
   document.getElementById('charCount').textContent = this.value.length;
   state.gift.dedicatoria = this.value;
 });
 
-// Tipo de envío
 document.querySelectorAll('.ship-option').forEach(opt => {
   opt.addEventListener('click', () => {
     document.querySelectorAll('.ship-option').forEach(o => o.classList.remove('selected'));
@@ -1259,11 +1204,7 @@ document.getElementById('btnPay').addEventListener('click', async () => {
       orderId: orderId,
       ebook: state.ebook,
       gift: { ...state.gift, audioFileId: audioFileId },
-      billing: {
-        name: name,
-        email: email,
-        phone: document.getElementById('billingPhone').value.trim()
-      },
+      billing: { name: name, email: email, phone: document.getElementById('billingPhone').value.trim() },
       total: calculateTotal()
     };
     
@@ -1278,7 +1219,6 @@ document.getElementById('btnPay').addEventListener('click', async () => {
       document.getElementById('orderNumber').textContent     = data.orderId || orderId;
       document.getElementById('confirmTitle').textContent     = state.ebook.title;
       document.getElementById('confirmRecipient').textContent = state.gift.recipientName || 'N/A';
-      // Mostrar detalles del pedido (solo para formato gift)
       document.getElementById('orderDetailsSection').style.display = 'block';
       hideLoading();
       goToStep(5);
@@ -1286,7 +1226,6 @@ document.getElementById('btnPay').addEventListener('click', async () => {
       throw new Error('Error procesando pedido');
     }
   } catch (error) {
-    console.error(error);
     hideLoading();
     showError('Error al procesar tu pedido. Intenta de nuevo.');
   }
@@ -1300,85 +1239,21 @@ function calculateTotal() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// PANEL 5: DESCARGAS
+// PANEL 5: DESCARGAS (VERSIÓN SUPABASE LIMPIA)
 // ═══════════════════════════════════════════════════════════════
 
 document.getElementById('btnDownloadPdf').addEventListener('click', async () => {
-  const btn = document.getElementById('btnDownloadPdf');
-  
-  // OPCIÓN 1: Si tenemos imágenes en el estado, generar PDF en el navegador
   if (state.ebook.images && state.ebook.images.length > 0) {
     await generatePdfFromImages(state.ebook.images);
-    return;
+  } else {
+    showError('Las imágenes aún se están procesando. Ve a "Mis Ebooks" en unos minutos.');
   }
-  
-  // OPCIÓN 2: Si hay pdfUrl de Drive, abrir directamente
-  if (state.ebook.pdfUrl) {
-    window.open(state.ebook.pdfUrl, '_blank');
-    return;
-  }
-  
-  // OPCIÓN 3: Buscar el PDF real en Drive por nombre
-  btn.innerHTML = '⏳ Buscando ebook...';
-  btn.disabled = true;
-  
-  try {
-    const title = state.ebook.title || '';
-    if (!title) throw new Error('No hay título');
-    
-    const pdfName = title.replace(/\s+/g, '_') + '.pdf';
-    
-    const searchResp = await fetch(
-      `https://www.googleapis.com/drive/v3/files?q=name%3D'${encodeURIComponent(pdfName)}'+and+'1ZQiirhfLa4usDPGnzA9OBrtckcn3kSm0'+in+parents&fields=files(id,webViewLink,webContentLink)&key=AIzaSyBkfSAqZljwjwtxSqz4K3-CnhGIx_2xp3I`
-    );
-    
-    if (searchResp.ok) {
-      const searchData = await searchResp.json();
-      if (searchData.files && searchData.files.length > 0) {
-        const file = searchData.files[0];
-        const downloadUrl = file.webContentLink || `https://drive.google.com/uc?id=${file.id}&export=download`;
-        window.open(downloadUrl, '_blank');
-        btn.innerHTML = '✅ ¡Descarga iniciada!';
-        setTimeout(() => { btn.innerHTML = '📄 Descargar PDF del Ebook'; btn.disabled = false; }, 3000);
-        return;
-      }
-    }
-    
-    // Si no encuentra PDF, intentar con las imágenes individuales de Drive
-    const imgSearch = await fetch(
-      `https://www.googleapis.com/drive/v3/files?q='1ZQiirhfLa4usDPGnzA9OBrtckcn3kSm0'+in+parents+and+name+contains+'${encodeURIComponent(title.replace(/\s+/g, '_'))}_pagina'+and+mimeType+contains+'image'&fields=files(id,name)&orderBy=name&key=AIzaSyBkfSAqZljwjwtxSqz4K3-CnhGIx_2xp3I`
-    );
-    
-    if (imgSearch.ok) {
-      const imgData = await imgSearch.json();
-      if (imgData.files && imgData.files.length > 0) {
-        const images = imgData.files
-          .sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true}))
-          .map(f => ({ url: 'https://lh3.googleusercontent.com/d/' + f.id, type: 'page' }));
-        
-        if (state.ebook.coverUrl) {
-          images.unshift({ url: state.ebook.coverUrl, type: 'cover' });
-        }
-        
-        state.ebook.images = images;
-        await generatePdfFromImages(images);
-        return;
-      }
-    }
-    
-    showError('Abre "Mis Ebooks" para ver tus libros en Google Drive.');
-  } catch(err) {
-    console.error('Error buscando PDF:', err);
-    showError('Abre "Mis Ebooks" para descargar tu libro desde Google Drive.');
-  }
-  
-  btn.innerHTML = '📄 Descargar PDF del Ebook';
-  btn.disabled = false;
 });
 
-// Generar PDF desde array de imágenes con jsPDF
+// Generar PDF desde array de imágenes (Supabase Native)
 async function generatePdfFromImages(images) {
   const btn = document.getElementById('btnDownloadPdf');
+  const origText = btn.innerHTML;
   btn.innerHTML = '⏳ Generando PDF... 0/' + images.length;
   btn.disabled = true;
   
@@ -1392,37 +1267,15 @@ async function generatePdfFromImages(images) {
       if (i > 0) pdf.addPage();
       
       try {
-        let url = images[i].url;
+        const response = await fetch(images[i].url);
+        if (!response.ok) throw new Error('Fallo de red');
         
-        // Extraer imageId de cualquier formato de URL de Google Drive
-        let imageId = null;
-        const lh3Match = url.match(/lh3\.googleusercontent\.com\/d\/([^?=\/]+)/);
-        const driveMatch = url.match(/drive\.google\.com\/.*?[?&]id=([^&]+)/);
-        const driveMatch2 = url.match(/drive\.google\.com\/file\/d\/([^\/]+)/);
-        
-        if (lh3Match) imageId = lh3Match[1];
-        else if (driveMatch) imageId = driveMatch[1];
-        else if (driveMatch2) imageId = driveMatch2[1];
-        
-        // Si tenemos imageId, usar la URL de thumbnail que SÍ permite CORS
-        if (imageId) {
-          url = 'https://drive.google.com/thumbnail?id=' + imageId + '&sz=w1600';
-        }
-        
+        const blob = await response.blob();
         const dataUrl = await new Promise((resolve, reject) => {
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.naturalWidth;
-            canvas.height = img.naturalHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            resolve(canvas.toDataURL('image/jpeg', 0.95));
-          };
-          img.onerror = () => reject(new Error('No se pudo cargar imagen ' + (i+1)));
-          img.src = url;
-          setTimeout(() => reject(new Error('Timeout imagen ' + (i+1))), 20000);
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error('Lectura fallida'));
+          reader.readAsDataURL(blob);
         });
         
         pdf.addImage(dataUrl, 'JPEG', 0, 0, pw, ph);
@@ -1433,14 +1286,13 @@ async function generatePdfFromImages(images) {
       }
     }
     
-    pdf.save((state.ebook.title || 'VIVOgift_ebook') + '.pdf');
+    pdf.save((state.ebook.title || 'VIVOgift_ebook').replace(/\s+/g, '_') + '.pdf');
     btn.innerHTML = '✅ ¡PDF Descargado!';
-    setTimeout(() => { btn.innerHTML = '📄 Descargar PDF del Ebook'; btn.disabled = false; }, 3000);
   } catch(err) {
     console.error('Error generando PDF:', err);
     showError('Error al generar el PDF.');
-    btn.innerHTML = '📄 Descargar PDF del Ebook';
-    btn.disabled = false;
+  } finally {
+    setTimeout(() => { btn.innerHTML = origText; btn.disabled = false; }, 3000);
   }
 }
 
@@ -1451,16 +1303,11 @@ document.getElementById('btnDownloadDoc').addEventListener('click', () => {
     showError('El documento aún no está disponible.');
   }
 });
-document.getElementById('btnDownloadCover').addEventListener('click', () => {
-  downloadCoverImage('btnDownloadCover');
-});
 
-// Nuevo botón de descarga de portada en Panel 5
 document.getElementById('btnDownloadCoverFinal').addEventListener('click', () => {
   downloadCoverImage('btnDownloadCoverFinal');
 });
 
-// Función reutilizable para descargar portada
 function downloadCoverImage(btnId) {
   const coverBase64 = state.ebook.coverUrl;
   if (!coverBase64) return;

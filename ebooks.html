@@ -76,15 +76,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 <main class="main">
   <h1 class="page-title">📚 Mis Ebooks</h1>
   <p class="page-sub">Todos tus libros ilustrados creados con VIVOgift</p>
-  <div class="drive-section">
-    <a href="https://drive.google.com/drive/folders/1ZQiirhfLa4usDPGnzA9OBrtckcn3kSm0" target="_blank">📁 Ver carpeta en Google Drive</a>
-  </div>
+  
   <div id="emptyState" class="empty-state" style="display:none">
     <div class="icon">📖</div>
     <h3>Aún no tienes ebooks guardados</h3>
     <p>Cuando crees un ebook desde el generador, aparecerá aquí automáticamente.</p>
     <a href="/generador-ebooks.html" class="btn-create" style="margin-top:16px">✨ Crear mi primer Ebook</a>
   </div>
+  
   <div id="ebooksGrid" class="ebooks-grid"></div>
   <a href="/generador-ebooks.html" class="btn-create" id="btnCreateNew" style="display:none">✨ Crear nuevo Ebook</a>
 </main>
@@ -109,10 +108,7 @@ function showError(msg) {
 }
 
 function getThumbUrl(url, size) {
-  if (!url) return '';
-  const m = url.match(/lh3\.googleusercontent\.com\/d\/([^?=\/]+)/);
-  if (m) return 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w' + size;
-  return url;
+  return url || ''; 
 }
 
 function renderPage() {
@@ -145,8 +141,7 @@ function renderPage() {
         <div class="meta">${ebook.style || ''} ${date ? '· ' + date : ''}</div>
         <div class="actions">
           ${pages > 0 ? `<button class="btn btn-pdf" onclick="downloadPdf(${idx}, this)">📄 PDF</button>` : ''}
-          <a class="btn btn-drive" href="https://drive.google.com/drive/folders/1ZQiirhfLa4usDPGnzA9OBrtckcn3kSm0" target="_blank">📁 Drive</a>
-          <button class="btn btn-delete" onclick="deleteEbook(${idx})" title="Eliminar">✕</button>
+          <button class="btn btn-delete" onclick="deleteEbook(${idx})" title="Eliminar">✕ Eliminar</button>
         </div>
       </div>`;
     grid.appendChild(card);
@@ -161,13 +156,15 @@ function zoomCover(idx) {
   document.getElementById('zoomOverlay').classList.add('active');
 }
 
+// Generación de PDF ultrarrápida usando enlaces directos de Supabase
 async function downloadPdf(idx, btn) {
   const ebook = getEbooks()[idx];
   const images = ebook.images || [];
   if (!images.length) { showError('Sin imágenes.'); return; }
 
   const orig = btn.innerHTML;
-  btn.disabled = true; btn.innerHTML = '⏳ 0/' + images.length;
+  btn.disabled = true; 
+  btn.innerHTML = '⏳ 0/' + images.length;
 
   try {
     const { jsPDF } = window.jspdf;
@@ -177,35 +174,33 @@ async function downloadPdf(idx, btn) {
     for (let i = 0; i < images.length; i++) {
       btn.innerHTML = '⏳ ' + (i+1) + '/' + images.length;
       if (i > 0) pdf.addPage();
+      
       try {
-        let url = images[i].url;
-        const m = url.match(/lh3\.googleusercontent\.com\/d\/([^?=\/]+)/);
-        if (m) url = 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w1600';
-
+        const response = await fetch(images[i].url);
+        if (!response.ok) throw new Error('Fallo HTTP al descargar');
+        
+        const blob = await response.blob();
         const dataUrl = await new Promise((resolve, reject) => {
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          img.onload = () => {
-            const c = document.createElement('canvas');
-            c.width = img.naturalWidth; c.height = img.naturalHeight;
-            c.getContext('2d').drawImage(img, 0, 0);
-            resolve(c.toDataURL('image/jpeg', 0.95));
-          };
-          img.onerror = () => reject(new Error('img'));
-          img.src = url;
-          setTimeout(() => reject(new Error('timeout')), 20000);
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error('Error de lectura'));
+          reader.readAsDataURL(blob);
         });
+
         pdf.addImage(dataUrl, 'JPEG', 0, 0, pw, ph);
       } catch(e) {
+        console.warn('Página ' + (i+1) + ' falló:', e);
         pdf.setFontSize(14);
         pdf.text('Página ' + (i+1) + ' no disponible', 20, 140);
       }
     }
+    
     pdf.save((ebook.title || 'ebook').replace(/\s+/g, '_') + '.pdf');
     btn.innerHTML = '✅ ¡Listo!';
-    setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 3000);
   } catch(err) {
-    showError('Error al generar PDF.'); btn.innerHTML = orig; btn.disabled = false;
+    showError('Error al generar PDF.'); 
+  } finally {
+    setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 3000);
   }
 }
 
