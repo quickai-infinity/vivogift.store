@@ -1392,21 +1392,19 @@ document.getElementById('btnDownloadPdf').addEventListener('click', async () => 
   btn.disabled = false;
 });
 
-// Generar PDF desde array de imágenes con jsPDF (VERSIÓN ANTI-CORS CON ALLORIGINS)
+// Generar PDF desde array de imágenes con jsPDF
 async function generatePdfFromImages(images) {
   const btn = document.getElementById('btnDownloadPdf') || document.querySelector('.btn-pdf');
   const originalText = btn.innerHTML;
   btn.innerHTML = '⏳ Generando PDF... 0/' + images.length;
   btn.disabled = true;
   
-  async function downloadPdf(idx, btn) {
-  const ebook = getEbooks()[idx];
-  const images = ebook.images || [];
-  if (!images.length) { showError('Sin imágenes.'); return; }
-
-  const orig = btn.innerHTML;
-  btn.disabled = true; 
-  btn.innerHTML = '⏳ 0/' + images.length;
+  if (!images || images.length === 0) { 
+    showError('Sin imágenes para generar el PDF.'); 
+    btn.innerHTML = originalText; 
+    btn.disabled = false;
+    return; 
+  }
 
   try {
     const { jsPDF } = window.jspdf;
@@ -1430,10 +1428,10 @@ async function generatePdfFromImages(images) {
         else if (m2) imageId = m2[1];
         else if (m3) imageId = m3[1];
 
-        // Usamos el API de Thumbnail de Google que NO bloquea por CORS si la imagen es pública
+        // Usamos el API de Thumbnail de Google
         let finalUrl = imageId ? `https://drive.google.com/thumbnail?id=${imageId}&sz=w1600` : originalUrl;
 
-        // Fetch directo sin proxies mediocres
+        // Fetch directo
         const response = await fetch(finalUrl);
         if (!response.ok) throw new Error('Error al descargar imagen desde Drive');
         const blob = await response.blob();
@@ -1453,13 +1451,16 @@ async function generatePdfFromImages(images) {
       }
     }
     
-    pdf.save((ebook.title || 'ebook').replace(/\s+/g, '_') + '.pdf');
+    // Usamos el título del estado global que ya existe en generador-ebooks.html
+    const title = (state && state.ebook && state.ebook.title) ? state.ebook.title : 'ebook';
+    pdf.save(title.replace(/\s+/g, '_') + '.pdf');
     btn.innerHTML = '✅ ¡Listo!';
-    setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 3000);
+    
   } catch(err) {
+    console.error(err);
     showError('Error al generar PDF.'); 
-    btn.innerHTML = orig; 
-    btn.disabled = false;
+  } finally {
+    setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 3000);
   }
 }
 
@@ -1470,6 +1471,7 @@ document.getElementById('btnDownloadDoc').addEventListener('click', () => {
     showError('El documento aún no está disponible.');
   }
 });
+
 document.getElementById('btnDownloadCover').addEventListener('click', () => {
   downloadCoverImage('btnDownloadCover');
 });
