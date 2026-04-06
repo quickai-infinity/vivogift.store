@@ -1002,6 +1002,22 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
         };
       }
       
+      // Guardar ebook en localStorage para la página Mis Ebooks
+      try {
+        const savedEbooks = JSON.parse(localStorage.getItem('vivogift_ebooks') || '[]');
+        savedEbooks.unshift({
+          title: state.ebook.title || '',
+          style: state.ebook.style || '',
+          coverUrl: state.ebook.coverUrl || '',
+          images: state.ebook.images || [],
+          docUrl: state.ebook.docUrl || '',
+          createdAt: new Date().toISOString()
+        });
+        // Máximo 50 ebooks guardados
+        if (savedEbooks.length > 50) savedEbooks.length = 50;
+        localStorage.setItem('vivogift_ebooks', JSON.stringify(savedEbooks));
+      } catch(e) { console.warn('No se pudo guardar en localStorage:', e); }
+      
       goToStep(5);
     }, 2000);
     
