@@ -196,7 +196,7 @@ async function downloadPdf(idx, btn) {
         let finalUrl = imageId ? `https://drive.google.com/uc?id=${imageId}&export=download` : originalUrl;
 
         // 🚀 EL TRUCO: Pasamos por el Proxy CORS
-        const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(finalUrl);
+        const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(finalUrl);
 
         // Descargamos el archivo como datos binarios (Blob) puros
         const response = await fetch(proxyUrl);

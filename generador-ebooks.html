@@ -1392,7 +1392,7 @@ document.getElementById('btnDownloadPdf').addEventListener('click', async () => 
   btn.disabled = false;
 });
 
-// Generar PDF desde array de imágenes con jsPDF (VERSIÓN ANTI-CORS)
+// Generar PDF desde array de imágenes con jsPDF (VERSIÓN ANTI-CORS CON ALLORIGINS)
 async function generatePdfFromImages(images) {
   const btn = document.getElementById('btnDownloadPdf') || document.querySelector('.btn-pdf');
   const originalText = btn.innerHTML;
@@ -1410,24 +1410,20 @@ async function generatePdfFromImages(images) {
       
       try {
         let originalUrl = images[i].url;
-        
-        // Extraer el ID de Drive de forma segura
         let imageId = null;
+        
         const driveIdMatch = originalUrl.match(/id=([a-zA-Z0-9_-]+)/) || originalUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
         if (driveIdMatch) imageId = driveIdMatch[1];
         
-        // Forzar la URL de descarga directa si tenemos el ID
         let finalUrl = imageId ? `https://drive.google.com/uc?id=${imageId}&export=download` : originalUrl;
         
-        // 🚀 EL TRUCO CLAVE: Usar un proxy CORS público para engañar a Google Drive
-        const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(finalUrl);
+        // NUEVO PROXY: AllOrigins (No bloquea descargas de Drive)
+        const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(finalUrl);
         
-        // Descargamos la imagen como un archivo binario crudo (Blob)
         const response = await fetch(proxyUrl);
         if (!response.ok) throw new Error('Error en proxy CORS');
         const blob = await response.blob();
         
-        // Convertimos el Blob a Base64 nativo (sin usar Canvas, evitando el bloqueo)
         const dataUrl = await new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onloadend = () => resolve(reader.result);
@@ -1443,9 +1439,8 @@ async function generatePdfFromImages(images) {
       }
     }
     
-    // Si estamos en la página de Mis Ebooks, intentamos usar el título de la tarjeta
-    const docTitle = typeof state !== 'undefined' && state.ebook ? state.ebook.title : 'VIVOgift_Ebook';
-    pdf.save((docTitle || 'VIVOgift_Ebook').replace(/\s+/g, '_') + '.pdf');
+    const docTitle = typeof state !== 'undefined' && state.ebook && state.ebook.title ? state.ebook.title : 'VIVOgift_Ebook';
+    pdf.save(docTitle.replace(/\s+/g, '_') + '.pdf');
     
     btn.innerHTML = '✅ ¡PDF Descargado!';
     setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 3000);
@@ -1453,17 +1448,6 @@ async function generatePdfFromImages(images) {
     console.error('Error generando PDF:', err);
     if(typeof showError === 'function') showError('Error al generar el PDF.');
     btn.innerHTML = originalText;
-    btn.disabled = false;
-  }
-}
-    
-    pdf.save((state.ebook.title || 'VIVOgift_ebook') + '.pdf');
-    btn.innerHTML = '✅ ¡PDF Descargado!';
-    setTimeout(() => { btn.innerHTML = '📄 Descargar PDF del Ebook'; btn.disabled = false; }, 3000);
-  } catch(err) {
-    console.error('Error generando PDF:', err);
-    showError('Error al generar el PDF.');
-    btn.innerHTML = '📄 Descargar PDF del Ebook';
     btn.disabled = false;
   }
 }
