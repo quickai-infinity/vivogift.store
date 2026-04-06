@@ -1328,17 +1328,35 @@ async function generatePdfFromImages(images) {
   }
 }
 
-document.getElementById('btnDownloadDoc').addEventListener('click', () => {
-  if (state.ebook.docUrl) {
-    window.open(state.ebook.docUrl, '_blank');
-  } else {
-    showError('El documento aún no está disponible.');
-  }
-});
+// ═══════════════════════════════════════════════════════════════
+// LISTENERS PROTEGIDOS (EVITAN EL ERROR DE LÍNEA 1331)
+// ═══════════════════════════════════════════════════════════════
 
-document.getElementById('btnDownloadCoverFinal').addEventListener('click', () => {
-  downloadCoverImage('btnDownloadCoverFinal');
-});
+if (document.getElementById('btnDownloadDoc')) {
+  document.getElementById('btnDownloadDoc').addEventListener('click', () => {
+    if (state.ebook.docUrl) {
+      window.open(state.ebook.docUrl, '_blank');
+    } else {
+      showError('El documento aún no está disponible.');
+    }
+  });
+}
+
+if (document.getElementById('btnDownloadCover')) {
+  document.getElementById('btnDownloadCover').addEventListener('click', () => {
+    downloadCoverImage('btnDownloadCover');
+  });
+}
+
+if (document.getElementById('btnDownloadCoverFinal')) {
+  document.getElementById('btnDownloadCoverFinal').addEventListener('click', () => {
+    downloadCoverImage('btnDownloadCoverFinal');
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FUNCIÓN DE DESCARGA PROFESIONAL (CON CANVAS PARA EVITAR CORS)
+// ═══════════════════════════════════════════════════════════════
 
 function downloadCoverImage(btnId) {
   const imgUrl = state.ebook.coverUrl;
@@ -1349,7 +1367,7 @@ function downloadCoverImage(btnId) {
   btn.innerHTML = '⏳ Procesando...';
 
   const img = new Image();
-  img.crossOrigin = 'anonymous'; // Esto es clave para evitar el bloqueo CORS
+  img.crossOrigin = 'anonymous'; // CRUCIAL: Permite leer los datos de Supabase sin error CORS
   
   img.onload = function() {
     const canvas = document.createElement('canvas');
@@ -1358,22 +1376,27 @@ function downloadCoverImage(btnId) {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(img, 0, 0);
     
-    const dataUrl = canvas.toDataURL('image/png');
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = (state.ebook.title || 'Portada_VIVOgift').replace(/\s+/g, '_') + '.png';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    
-    btn.innerHTML = '✅ ¡Descargada!';
+    try {
+      const dataUrl = canvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = (state.ebook.title || 'Portada_VIVOgift').replace(/\s+/g, '_') + '.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      btn.innerHTML = '✅ ¡Descargada!';
+    } catch (err) {
+      console.error("Error al convertir imagen:", err);
+      window.open(imgUrl, '_blank'); // Fallback si falla el canvas
+      btn.innerHTML = '✅ Abrir Imagen';
+    }
     setTimeout(() => btn.innerHTML = originalText, 3000);
   };
 
   img.onerror = function() {
-    console.error("Error al procesar la imagen para descarga");
-    // Fallback: Si el canvas falla, intentamos abrir en pestaña nueva
-    window.open(imgUrl, '_blank');
+    console.error("Error al cargar la imagen para descarga");
+    window.open(imgUrl, '_blank'); 
     btn.innerHTML = originalText;
   };
 
