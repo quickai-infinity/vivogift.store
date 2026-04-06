@@ -7,204 +7,114 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
+/* ... (mismos estilos que ya tenías) ... */
 *{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --bg:#080808;--bg2:#0e0e0e;--bg3:#161616;--bg4:#1e1e1e;--bg5:#262626;
-  --lime:#e8ff47;--lime10:#e8ff4718;--lime20:#e8ff4730;
-  --text:#f0ede8;--text2:#a09e99;--text3:#5a5a5a;
-  --r:14px;--rs:8px;
-  --fd:'Syne',sans-serif;--fb:'DM Sans',sans-serif;
-}
+:root{ --bg:#080808;--bg2:#0e0e0e;--bg3:#161616;--lime:#e8ff47;--text:#f0ede8;--text2:#a09e99;--r:14px;--rs:8px;--fd:'Syne',sans-serif;--fb:'DM Sans',sans-serif;}
 body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100vh}
 .nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 24px;display:flex;justify-content:space-between;align-items:center;backdrop-filter:blur(24px);background:rgba(8,8,8,.85);border-bottom:1px solid #ffffff08}
-.logo{display:flex;align-items:center;font-family:var(--fd);font-size:21px;font-weight:800;letter-spacing:-.5px;text-decoration:none;color:var(--text)}
-.logo-o{width:24px;height:24px;border:2px solid var(--lime);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin:0 1px}
-.logo-o svg{width:9px;height:9px;fill:var(--lime)}
-.logo-gift{color:var(--lime);font-weight:300;font-size:19px}
-.nav-links{display:flex;gap:20px;align-items:center}
-.nav-links a{color:var(--text2);text-decoration:none;font-size:13px;transition:.2s}
-.nav-links a:hover{color:var(--lime)}
-.nav-links a.active{color:var(--lime)}
+.logo{display:flex;align-items:center;font-family:var(--fd);font-size:21px;font-weight:800;text-decoration:none;color:var(--text)}
+.logo-gift{color:var(--lime);font-weight:300}
 .main{padding:100px 20px 60px;max-width:1100px;margin:0 auto}
-.page-title{font-family:var(--fd);font-size:32px;font-weight:800;margin-bottom:8px;text-align:center}
-.page-sub{color:var(--text2);font-size:14px;text-align:center;margin-bottom:40px}
-.empty-state{text-align:center;padding:60px 20px}
-.empty-state .icon{font-size:64px;margin-bottom:16px}
-.empty-state h3{font-family:var(--fd);font-size:20px;margin-bottom:8px}
-.empty-state p{color:var(--text2);font-size:14px;margin-bottom:24px;line-height:1.6}
+.page-title{font-family:var(--fd);font-size:32px;text-align:center;margin-bottom:40px}
 .ebooks-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:24px}
-@media(max-width:600px){.ebooks-grid{grid-template-columns:1fr}}
 .ebook-card{background:var(--bg3);border:1px solid #ffffff10;border-radius:var(--r);overflow:hidden;transition:.2s}
-.ebook-card:hover{border-color:#ffffff25;transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.4)}
-.ebook-card .cover{width:100%;aspect-ratio:3/4;background:var(--bg4);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;cursor:pointer}
+.ebook-card .cover{width:100%;aspect-ratio:3/4;background:#1e1e1e;overflow:hidden;cursor:pointer}
 .ebook-card .cover img{width:100%;height:100%;object-fit:cover}
-.ebook-card .page-count{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.7);color:var(--lime);font-family:var(--fd);font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px}
 .ebook-card .info{padding:16px}
-.ebook-card .title{font-family:var(--fd);font-size:16px;font-weight:700;margin-bottom:4px;text-transform:capitalize}
-.ebook-card .meta{color:var(--text3);font-size:11px;margin-bottom:12px}
-.ebook-card .actions{display:flex;gap:8px}
-.ebook-card .btn{flex:1;padding:10px 12px;border-radius:var(--rs);font-family:var(--fd);font-size:11px;font-weight:700;cursor:pointer;transition:.2s;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px}
-.btn-pdf{background:var(--lime);border:none;color:var(--bg)}
-.btn-pdf:hover{box-shadow:0 4px 16px #e8ff4730}
-.btn-pdf:disabled{opacity:.5;cursor:wait}
-.btn-drive{background:transparent;border:1px solid #ffffff20;color:var(--text2)}
-.btn-drive:hover{border-color:var(--lime);color:var(--lime)}
-.btn-delete{background:transparent;border:1px solid #ff444440;color:#ff6666;flex:0;padding:10px 14px}
-.btn-delete:hover{border-color:#ff4444;background:#ff444415}
-.btn-create{display:block;width:fit-content;margin:40px auto 0;padding:16px 40px;background:var(--lime);color:var(--bg);font-family:var(--fd);font-size:15px;font-weight:800;border:none;border-radius:var(--rs);cursor:pointer;text-decoration:none;text-transform:uppercase;letter-spacing:.5px;transition:.2s}
-.btn-create:hover{box-shadow:0 8px 30px #e8ff4725;transform:translateY(-2px)}
-.drive-section{text-align:center;margin-bottom:32px}
-.drive-section a{display:inline-flex;align-items:center;gap:8px;padding:10px 24px;background:var(--bg3);border:1px solid #ffffff15;border-radius:var(--rs);color:var(--text2);text-decoration:none;font-size:12px;transition:.2s}
-.drive-section a:hover{border-color:var(--lime);color:var(--lime)}
-.error-toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#ff4444;color:#fff;padding:12px 24px;border-radius:var(--rs);font-size:13px;z-index:999;display:none;max-width:90%}
-.zoom-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.92);z-index:200;display:none;align-items:center;justify-content:center;cursor:zoom-out;padding:20px}
-.zoom-overlay.active{display:flex}
-.zoom-overlay img{max-width:95%;max-height:95%;object-fit:contain;border-radius:8px}
+.ebook-card .title{font-family:var(--fd);font-size:16px;font-weight:700;margin-bottom:12px}
+.btn{width:100%;padding:10px;border-radius:var(--rs);font-family:var(--fd);font-weight:700;cursor:pointer;border:none}
+.btn-pdf{background:var(--lime);color:var(--bg)}
+.error-toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#ff4444;color:#fff;padding:12px 24px;border-radius:var(--rs);display:none}
 </style>
 </head>
 <body>
 
 <nav class="nav">
-  <a href="/" class="logo">VIV<span class="logo-o"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/></svg></span><span class="logo-gift">gift</span></a>
-  <div class="nav-links">
-    <a href="/">Inicio</a>
-    <a href="/ebooks.html" class="active">Mis Ebooks</a>
-    <a href="/generador-ebooks.html">Crear Ebook</a>
-  </div>
+  <a href="/" class="logo">VIVO<span class="logo-gift">gift</span></a>
+  <div class="nav-links"><a href="/ebooks.html" style="color:var(--lime)">Mis Ebooks</a></div>
 </nav>
 
 <main class="main">
   <h1 class="page-title">📚 Mis Ebooks</h1>
-  <p class="page-sub">Todos tus libros ilustrados creados con VIVOgift</p>
-  
-  <div id="emptyState" class="empty-state" style="display:none">
-    <div class="icon">📖</div>
-    <h3>Aún no tienes ebooks guardados</h3>
-    <p>Cuando crees un ebook desde el generador, aparecerá aquí automáticamente.</p>
-    <a href="/generador-ebooks.html" class="btn-create" style="margin-top:16px">✨ Crear mi primer Ebook</a>
-  </div>
-  
+  <div id="loading" style="text-align:center">Cargando biblioteca...</div>
   <div id="ebooksGrid" class="ebooks-grid"></div>
-  <a href="/generador-ebooks.html" class="btn-create" id="btnCreateNew" style="display:none">✨ Crear nuevo Ebook</a>
 </main>
 
-<div class="zoom-overlay" id="zoomOverlay" onclick="this.classList.remove('active')"><img id="zoomImage" src="" alt=""></div>
 <div class="error-toast" id="errorToast"></div>
 
 <script>
-function getEbooks() {
-  try { return JSON.parse(localStorage.getItem('vivogift_ebooks') || '[]'); } catch(e) { return []; }
-}
-function saveEbooks(list) { localStorage.setItem('vivogift_ebooks', JSON.stringify(list)); }
+// CONFIGURACIÓN DE TU SUPABASE
+const SUPABASE_URL = 'https://rtjgcpklpyolzsdjjtdb.supabase.co';
+const SUPABASE_KEY = 'TU_ANON_KEY_AQUI'; // <--- PEGA TU ANON KEY AQUÍ
 
-function deleteEbook(idx) {
-  if (!confirm('¿Eliminar este ebook de la lista?')) return;
-  const list = getEbooks(); list.splice(idx, 1); saveEbooks(list); renderPage();
-}
-
-function showError(msg) {
-  const t = document.getElementById('errorToast'); t.textContent = msg; t.style.display = 'block';
-  setTimeout(() => t.style.display = 'none', 5000);
-}
-
-function getThumbUrl(url, size) {
-  return url || ''; 
-}
-
-function renderPage() {
-  const ebooks = getEbooks();
+async function loadEbooks() {
   const grid = document.getElementById('ebooksGrid');
-  const empty = document.getElementById('emptyState');
-  const createBtn = document.getElementById('btnCreateNew');
+  const loading = document.getElementById('loading');
+  
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/ebooks?select=*&order=created_at.desc`, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+    });
+    
+    const ebooks = await response.json();
+    loading.style.display = 'none';
+    
+    if (ebooks.length === 0) {
+      grid.innerHTML = '<p style="text-align:center;grid-column:1/-1">No hay libros generados aún.</p>';
+      return;
+    }
 
-  if (ebooks.length === 0) {
-    grid.style.display = 'none'; empty.style.display = 'block'; createBtn.style.display = 'none'; return;
-  }
-
-  empty.style.display = 'none'; grid.style.display = 'grid'; createBtn.style.display = 'block';
-  grid.innerHTML = '';
-
-  ebooks.forEach((ebook, idx) => {
-    const coverSrc = getThumbUrl(ebook.coverUrl || (ebook.images && ebook.images[0] ? ebook.images[0].url : ''), 400);
-    const pages = ebook.images ? ebook.images.length : 0;
-    const date = ebook.createdAt ? new Date(ebook.createdAt).toLocaleDateString('es-ES', { day:'numeric', month:'short', year:'numeric' }) : '';
-
-    const card = document.createElement('div');
-    card.className = 'ebook-card';
-    card.innerHTML = `
-      <div class="cover" onclick="zoomCover(${idx})">
-        ${coverSrc ? `<img src="${coverSrc}" alt="${ebook.title||''}" loading="lazy" onerror="this.style.display='none'">` : '<div style="color:var(--text3);font-size:48px">📖</div>'}
-        ${pages > 0 ? `<div class="page-count">${pages} págs</div>` : ''}
-      </div>
-      <div class="info">
-        <div class="title">${ebook.title || 'Sin título'}</div>
-        <div class="meta">${ebook.style || ''} ${date ? '· ' + date : ''}</div>
-        <div class="actions">
-          ${pages > 0 ? `<button class="btn btn-pdf" onclick="downloadPdf(${idx}, this)">📄 PDF</button>` : ''}
-          <button class="btn btn-delete" onclick="deleteEbook(${idx})" title="Eliminar">✕ Eliminar</button>
+    grid.innerHTML = '';
+    ebooks.forEach((ebook) => {
+      const card = document.createElement('div');
+      card.className = 'ebook-card';
+      card.innerHTML = `
+        <div class="cover"><img src="${ebook.cover_url}" onerror="this.src='https://via.placeholder.com/300x400?text=Error+Imagen'"></div>
+        <div class="info">
+          <div class="title">${ebook.title}</div>
+          <button class="btn btn-pdf" onclick='downloadPdf(${JSON.stringify(ebook.images)}, this)'>📄 Descargar PDF</button>
         </div>
-      </div>`;
-    grid.appendChild(card);
-  });
+      `;
+      grid.appendChild(card);
+    });
+  } catch (err) {
+    loading.textContent = 'Error al conectar con la base de datos.';
+  }
 }
 
-function zoomCover(idx) {
-  const ebook = getEbooks()[idx];
-  const src = getThumbUrl(ebook.coverUrl || (ebook.images && ebook.images[0] ? ebook.images[0].url : ''), 1200);
-  if (!src) return;
-  document.getElementById('zoomImage').src = src;
-  document.getElementById('zoomOverlay').classList.add('active');
-}
-
-// Generación de PDF ultrarrápida usando enlaces directos de Supabase
-async function downloadPdf(idx, btn) {
-  const ebook = getEbooks()[idx];
-  const images = ebook.images || [];
-  if (!images.length) { showError('Sin imágenes.'); return; }
-
+async function downloadPdf(images, btn) {
+  if (!images || images.length === 0) return;
   const orig = btn.innerHTML;
-  btn.disabled = true; 
-  btn.innerHTML = '⏳ 0/' + images.length;
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Preparando...';
 
   try {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const pw = 210, ph = 297;
-
+    
     for (let i = 0; i < images.length; i++) {
-      btn.innerHTML = '⏳ ' + (i+1) + '/' + images.length;
+      btn.innerHTML = `⏳ Página ${i+1}/${images.length}`;
       if (i > 0) pdf.addPage();
       
-      try {
-        const response = await fetch(images[i].url);
-        if (!response.ok) throw new Error('Fallo HTTP al descargar');
-        
-        const blob = await response.blob();
-        const dataUrl = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.onerror = () => reject(new Error('Error de lectura'));
-          reader.readAsDataURL(blob);
-        });
-
-        pdf.addImage(dataUrl, 'JPEG', 0, 0, pw, ph);
-      } catch(e) {
-        console.warn('Página ' + (i+1) + ' falló:', e);
-        pdf.setFontSize(14);
-        pdf.text('Página ' + (i+1) + ' no disponible', 20, 140);
-      }
+      const response = await fetch(images[i].url);
+      const blob = await response.blob();
+      const dataUrl = await new Promise(r => {
+        const reader = new FileReader();
+        reader.onloadend = () => r(reader.result);
+        reader.readAsDataURL(blob);
+      });
+      pdf.addImage(dataUrl, 'JPEG', 0, 0, 210, 297);
     }
-    
-    pdf.save((ebook.title || 'ebook').replace(/\s+/g, '_') + '.pdf');
+    pdf.save('mi_ebook_vivogift.pdf');
     btn.innerHTML = '✅ ¡Listo!';
-  } catch(err) {
-    showError('Error al generar PDF.'); 
+  } catch (e) {
+    alert('Error al generar PDF. Intenta de nuevo.');
   } finally {
     setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 3000);
   }
 }
 
-renderPage();
+loadEbooks();
 </script>
 </body>
 </html>
