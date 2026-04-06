@@ -167,8 +167,7 @@ async function downloadPdf(idx, btn) {
   if (!images.length) { showError('Sin imágenes.'); return; }
 
   const orig = btn.innerHTML;
-  btn.disabled = true; 
-  btn.innerHTML = '⏳ 0/' + images.length;
+  btn.disabled = true; btn.innerHTML = '⏳ 0/' + images.length;
 
   try {
     const { jsPDF } = window.jspdf;
@@ -178,50 +177,35 @@ async function downloadPdf(idx, btn) {
     for (let i = 0; i < images.length; i++) {
       btn.innerHTML = '⏳ ' + (i+1) + '/' + images.length;
       if (i > 0) pdf.addPage();
-      
       try {
-        let originalUrl = images[i].url;
-        let imageId = null;
-
-        // Extraer el ID exacto del Drive
-        const m1 = originalUrl.match(/lh3\.googleusercontent\.com\/d\/([^?=\/]+)/);
-        const m2 = originalUrl.match(/id=([a-zA-Z0-9_-]+)/);
-        const m3 = originalUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-
-        if (m1) imageId = m1[1];
-        else if (m2) imageId = m2[1];
-        else if (m3) imageId = m3[1];
-
-        // Usamos el API de Thumbnail de Google que NO bloquea por CORS si la imagen es pública
-        let finalUrl = imageId ? `https://drive.google.com/thumbnail?id=${imageId}&sz=w1600` : originalUrl;
-
-        // Fetch directo sin proxies mediocres
-        const response = await fetch(finalUrl);
-        if (!response.ok) throw new Error('Error al descargar imagen desde Drive');
-        const blob = await response.blob();
+        let url = images[i].url;
+        const m = url.match(/lh3\.googleusercontent\.com\/d\/([^?=\/]+)/);
+        if (m) url = 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w1600';
 
         const dataUrl = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.onerror = () => reject(new Error('Error leyendo blob'));
-          reader.readAsDataURL(blob);
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            const c = document.createElement('canvas');
+            c.width = img.naturalWidth; c.height = img.naturalHeight;
+            c.getContext('2d').drawImage(img, 0, 0);
+            resolve(c.toDataURL('image/jpeg', 0.95));
+          };
+          img.onerror = () => reject(new Error('img'));
+          img.src = url;
+          setTimeout(() => reject(new Error('timeout')), 20000);
         });
-
         pdf.addImage(dataUrl, 'JPEG', 0, 0, pw, ph);
       } catch(e) {
-        console.warn('Fallo en página', i+1, e);
         pdf.setFontSize(14);
         pdf.text('Página ' + (i+1) + ' no disponible', 20, 140);
       }
     }
-    
     pdf.save((ebook.title || 'ebook').replace(/\s+/g, '_') + '.pdf');
     btn.innerHTML = '✅ ¡Listo!';
     setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 3000);
   } catch(err) {
-    showError('Error al generar PDF.'); 
-    btn.innerHTML = orig; 
-    btn.disabled = false;
+    showError('Error al generar PDF.'); btn.innerHTML = orig; btn.disabled = false;
   }
 }
 
