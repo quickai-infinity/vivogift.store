@@ -119,26 +119,37 @@ async function renderPage() {
     empty.style.display = 'none'; grid.style.display = 'grid'; createBtn.style.display = 'block';
     grid.innerHTML = '';
 
-    ebooks.forEach((ebook, idx) => {
+    ebooks.forEach((ebook) => {
       const pages = Array.isArray(ebook.images) ? ebook.images.length : 0;
       const date = ebook.created_at ? new Date(ebook.created_at).toLocaleDateString('es-ES', { day:'numeric', month:'short', year:'numeric' }) : '';
 
       const card = document.createElement('div');
       card.className = 'ebook-card';
+      
       card.innerHTML = `
-        <div class="cover" onclick="zoomCover('${ebook.cover_url}')">
+        <div class="cover" id="cover-${ebook.id}">
           <img src="${ebook.cover_url}" alt="${ebook.title}" onerror="this.src='https://via.placeholder.com/300x400?text=Cargando...'">
           ${pages > 0 ? `<div class="page-count">${pages} págs</div>` : ''}
         </div>
         <div class="info">
           <div class="title">${ebook.title || 'Sin título'}</div>
           <div class="meta">${ebook.style || ''} ${date ? '· ' + date : ''}</div>
-          <div class="actions">
-            <button class="btn btn-pdf" onclick='downloadPdf(${JSON.stringify(ebook.images)}, this, "${ebook.title}")'>📄 PDF</button>
+          <div class="actions" id="actions-${ebook.id}">
             <button class="btn btn-delete" onclick="deleteEbook('${ebook.id}')" title="Eliminar">✕</button>
           </div>
         </div>`;
+      
       grid.appendChild(card);
+
+      document.getElementById(`cover-${ebook.id}`).onclick = () => zoomCover(ebook.cover_url);
+      
+      const btnPdf = document.createElement('button');
+      btnPdf.className = 'btn btn-pdf';
+      btnPdf.innerHTML = '📄 PDF';
+      btnPdf.onclick = () => downloadPdf(ebook.images, btnPdf, ebook.title);
+      
+      const actionsContainer = document.getElementById(`actions-${ebook.id}`);
+      actionsContainer.insertBefore(btnPdf, actionsContainer.firstChild);
     });
   } catch (err) {
     grid.innerHTML = '<p style="text-align:center; color:#ff4444;">Error al conectar con la biblioteca.</p>';
@@ -180,14 +191,17 @@ async function downloadPdf(images, btn, title) {
       if (i > 0) pdf.addPage();
       
       try {
-        const response = await fetch(images[i].url);
+        const cleanUrl = encodeURI(images[i].url.trim());
+        const response = await fetch(cleanUrl);
+        if(!response.ok) throw new Error('Error al descargar');
+        
         const blob = await response.blob();
         const dataUrl = await new Promise(r => {
           const reader = new FileReader();
           reader.onloadend = () => r(reader.result);
           reader.readAsDataURL(blob);
         });
-        pdf.addImage(dataUrl, 'JPEG', 0, 0, 210, 297);
+        pdf.addImage(dataUrl, 'PNG', 0, 0, 210, 297);
       } catch(e) {
         pdf.setFontSize(14);
         pdf.text('Página ' + (i+1) + ' no disponible', 20, 140);
@@ -202,7 +216,6 @@ async function downloadPdf(images, btn, title) {
     setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 3000);
   }
 }
-
 renderPage();
 </script>
 </body>
