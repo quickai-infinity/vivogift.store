@@ -146,7 +146,7 @@ async function renderPage() {
       const btnPdf = document.createElement('button');
       btnPdf.className = 'btn btn-pdf';
       btnPdf.innerHTML = '📄 PDF';
-      btnPdf.onclick = () => downloadPdf(ebook.images, btnPdf, ebook.title);
+      btnPdf.onclick = () => downloadPdf(ebook.pdf_url, btnPdf);
       
       const actionsContainer = document.getElementById(`actions-${ebook.id}`);
       actionsContainer.insertBefore(btnPdf, actionsContainer.firstChild);
@@ -174,47 +174,21 @@ async function deleteEbook(id) {
   } catch (e) { showError('No se pudo eliminar el ebook.'); }
 }
 
-// NUEVA FUNCIÓN: GENERAR PDF DESDE IMÁGENES PÚBLICAS
-async function downloadPdf(images, btn, title) {
-  if (!images || images.length === 0) { showError('Sin imágenes disponibles.'); return; }
-
-  const orig = btn.innerHTML;
-  btn.disabled = true; 
-  btn.innerHTML = '⏳ Preparando...';
-
-  try {
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-
-    for (let i = 0; i < images.length; i++) {
-      btn.innerHTML = `⏳ ${i+1}/${images.length}`;
-      if (i > 0) pdf.addPage();
-      
-      try {
-        const cleanUrl = encodeURI(images[i].url.trim());
-        const response = await fetch(cleanUrl);
-        if(!response.ok) throw new Error('Error al descargar');
-        
-        const blob = await response.blob();
-        const dataUrl = await new Promise(r => {
-          const reader = new FileReader();
-          reader.onloadend = () => r(reader.result);
-          reader.readAsDataURL(blob);
-        });
-        pdf.addImage(dataUrl, 'PNG', 0, 0, 210, 297);
-      } catch(e) {
-        pdf.setFontSize(14);
-        pdf.text('Página ' + (i+1) + ' no disponible', 20, 140);
-      }
-    }
-    
-    pdf.save((title || 'ebook').replace(/\s+/g, '_') + '.pdf');
-    btn.innerHTML = '✅ ¡Listo!';
-  } catch(err) {
-    showError('Error al generar PDF.'); 
-  } finally {
-    setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 3000);
+// NUEVA FUNCIÓN: ABRIR EL PDF DESDE SUPABASE DIRECTAMENTE
+function downloadPdf(pdfUrl, btn) {
+  // Verificamos si la URL existe o si el servidor aún lo está creando
+  if (!pdfUrl || pdfUrl === 'undefined' || pdfUrl === 'null') { 
+    showError('El PDF aún se está procesando. Intenta de nuevo en un minuto.'); 
+    return; 
   }
+  
+  const orig = btn.innerHTML;
+  btn.innerHTML = '⏳ Abriendo...';
+  
+  // Abre la URL del PDF en una pestaña nueva para descargar o visualizar
+  window.open(pdfUrl, '_blank'); 
+  
+  setTimeout(() => { btn.innerHTML = orig; }, 2000);
 }
 renderPage();
 </script>

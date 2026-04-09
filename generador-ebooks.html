@@ -1274,11 +1274,19 @@ function calculateTotal() {
 // PANEL 5: DESCARGAS (VERSIÓN SUPABASE LIMPIA)
 // ═══════════════════════════════════════════════════════════════
 
-document.getElementById('btnDownloadPdf').addEventListener('click', async () => {
-  if (state.ebook.images && state.ebook.images.length > 0) {
-    await generatePdfFromImages(state.ebook.images);
+document.getElementById('btnDownloadPdf').addEventListener('click', () => {
+  const btn = document.getElementById('btnDownloadPdf');
+  
+  // state.ebook.pdfUrl es la variable que n8n envía al final del flujo
+  if (state.ebook.pdfUrl && state.ebook.pdfUrl !== '') {
+    const origText = btn.innerHTML;
+    btn.innerHTML = '⏳ Abriendo...';
+    
+    window.open(state.ebook.pdfUrl, '_blank');
+    
+    setTimeout(() => { btn.innerHTML = origText; }, 2000);
   } else {
-    showError('Las imágenes aún se están procesando. Ve a "Mis Ebooks" en unos minutos.');
+    showError('El archivo PDF se está terminando de procesar. Espera un momento.');
   }
 });
 
@@ -1310,7 +1318,7 @@ async function generatePdfFromImages(images) {
           reader.readAsDataURL(blob);
         });
         
-        pdf.addImage(dataUrl, 'JPEG', 0, 0, pw, ph);
+        pdf.addImage(dataUrl, 'PNG', 0, 0, pw, ph);
       } catch(e) {
         console.warn('Imagen ' + (i+1) + ' falló:', e.message);
         pdf.setFontSize(14);
