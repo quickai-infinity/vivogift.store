@@ -497,8 +497,7 @@ textarea{resize:vertical;min-height:90px}
     </div>
   </div>
 
-  
-   <div class="panel" id="panel5">
+  <div class="panel" id="panel5">
     <div class="confirm-panel">
       <div class="confirm-icon">🎉</div>
       <h2>¡Tu Historia está en Camino!</h2>
@@ -524,17 +523,6 @@ textarea{resize:vertical;min-height:90px}
           </div>
         </div>
       </div>
-
-      <div class="download-buttons">
-        <a href="/ebooks.html" class="btn-download-pdf" style="text-decoration:none;">📁 Ir a Mis Ebooks</a>
-        <button class="btn-generate" id="btnDownloadCoverFinal" style="max-width:240px;background:var(--bg4);border:1px solid #ffffff20;color:var(--text);font-size:12px;">⬇️ Descargar Portada</button>
-      </div>
-      
-      <div style="margin-top:32px;">
-        <button class="btn-back" onclick="location.reload()" style="border-color:var(--lime);color:var(--lime);">✨ Crear otro Ebook</button>
-      </div>
-    </div>
-  </div>
 
       <div class="download-buttons">
         <a href="/ebooks.html" class="btn-download-pdf" style="text-decoration:none;">📁 Ir a Mis Ebooks</a>
@@ -1314,17 +1302,53 @@ function calculateTotal() {
   } else {
     showError('El archivo PDF se está terminando de procesar. Espera un momento.');
   }
-  ;
-   
+;
+
+// Generar PDF desde array de imágenes (Supabase Native)
+async function generatePdfFromImages(images) {
+  const btn = document.getElementById('btnDownloadPdf');
+  const origText = btn.innerHTML;
+  btn.innerHTML = '⏳ Generando PDF... 0/' + images.length;
+  btn.disabled = true;
+  
+  try {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pw = 210, ph = 297;
+    
+    for (let i = 0; i < images.length; i++) {
+      btn.innerHTML = '⏳ Generando PDF... ' + (i+1) + '/' + images.length;
+      if (i > 0) pdf.addPage();
+      
+      try {
+        const response = await fetch(images[i].url);
+        if (!response.ok) throw new Error('Fallo de red');
+        
+        const blob = await response.blob();
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error('Lectura fallida'));
+          reader.readAsDataURL(blob);
+        });
+        
+        pdf.addImage(dataUrl, 'PNG', 0, 0, pw, ph);
+      } catch(e) {
+        console.warn('Imagen ' + (i+1) + ' falló:', e.message);
+        pdf.setFontSize(14);
+        pdf.text('Página ' + (i+1) + ' no disponible', 20, 140);
+      }
+    }
+    
     pdf.save((state.ebook.title || 'VIVOgift_ebook').replace(/\s+/g, '_') + '.pdf');
     btn.innerHTML = '✅ ¡PDF Descargado!';
-    catch(err) {
+  } catch(err) {
     console.error('Error generando PDF:', err);
     showError('Error al generar el PDF.');
   } finally {
     setTimeout(() => { btn.innerHTML = origText; btn.disabled = false; }, 3000);
   }
-
+}
 
 // ═══════════════════════════════════════════════════════════════
 // LISTENERS PROTEGIDOS (EVITAN EL ERROR DE LÍNEA 1331)
