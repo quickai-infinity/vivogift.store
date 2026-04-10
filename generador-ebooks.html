@@ -1314,17 +1314,17 @@ function calculateTotal() {
   } else {
     showError('El archivo PDF se está terminando de procesar. Espera un momento.');
   }
-});
+  ;
    
     pdf.save((state.ebook.title || 'VIVOgift_ebook').replace(/\s+/g, '_') + '.pdf');
     btn.innerHTML = '✅ ¡PDF Descargado!';
-  } catch(err) {
+    catch(err) {
     console.error('Error generando PDF:', err);
     showError('Error al generar el PDF.');
   } finally {
     setTimeout(() => { btn.innerHTML = origText; btn.disabled = false; }, 3000);
   }
-}
+
 
 // ═══════════════════════════════════════════════════════════════
 // LISTENERS PROTEGIDOS (EVITAN EL ERROR DE LÍNEA 1331)
