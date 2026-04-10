@@ -497,11 +497,12 @@ textarea{resize:vertical;min-height:90px}
     </div>
   </div>
 
-  <div class="panel" id="panel5">
+  
+   <div class="panel" id="panel5">
     <div class="confirm-panel">
       <div class="confirm-icon">🎉</div>
-      <h2>¡Tu Ebook está Listo!</h2>
-      <p>Tu libro ilustrado ha sido creado con éxito. Aquí tienes tu vista previa y descargas.</p>
+      <h2>¡Tu Historia está en Camino!</h2>
+      <p>Estamos ilustrando y ensamblando tu libro con máxima calidad en el servidor.</p>
       
       <div style="display:flex;gap:24px;justify-content:center;align-items:flex-start;flex-wrap:wrap;margin:24px 0 32px;">
         <div style="text-align:center;">
@@ -517,9 +518,34 @@ textarea{resize:vertical;min-height:90px}
             <div>📖 <span id="ebookResultPages">10</span> páginas ilustradas</div>
             <div>🎨 Estilo: <span id="ebookResultStyle">-</span></div>
             <div>👤 Protagonista: <span id="ebookResultProtagonist">-</span></div>
+            <div style="margin-top:15px; padding:12px; background:var(--bg4); border-radius:var(--rs); border:1px solid var(--lime20); color:var(--lime); font-size:12px; line-height:1.4;">
+              ⏳ <b>Importante:</b> La generación completa toma entre 5 y 20 minutos según el número de páginas. Podrás descargar el PDF final en la sección <b>"Mis Ebooks"</b> en cuanto esté listo.
+            </div>
           </div>
         </div>
       </div>
+
+      <div class="download-buttons">
+        <a href="/ebooks.html" class="btn-download-pdf" style="text-decoration:none;">📁 Ir a Mis Ebooks</a>
+        <button class="btn-generate" id="btnDownloadCoverFinal" style="max-width:240px;background:var(--bg4);border:1px solid #ffffff20;color:var(--text);font-size:12px;">⬇️ Descargar Portada</button>
+      </div>
+      
+      <div style="margin-top:32px;">
+        <button class="btn-back" onclick="location.reload()" style="border-color:var(--lime);color:var(--lime);">✨ Crear otro Ebook</button>
+      </div>
+    </div>
+  </div>
+
+      <div class="download-buttons">
+        <a href="/ebooks.html" class="btn-download-pdf" style="text-decoration:none;">📁 Ir a Mis Ebooks</a>
+        <button class="btn-generate" id="btnDownloadCoverFinal" style="max-width:240px;background:var(--bg4);border:1px solid #ffffff20;color:var(--text);font-size:12px;">⬇️ Descargar Portada</button>
+      </div>
+      
+      <div style="margin-top:32px;">
+        <button class="btn-back" onclick="location.reload()" style="border-color:var(--lime);color:var(--lime);">✨ Crear otro Ebook</button>
+      </div>
+    </div>
+  </div>
 
       <div class="order-details" id="orderDetailsSection" style="display:none;">
         <h4>📦 Detalles del Pedido #<span id="orderNumber">VG-12345</span></h4>
@@ -1274,7 +1300,7 @@ function calculateTotal() {
 // PANEL 5: DESCARGAS (VERSIÓN SUPABASE LIMPIA)
 // ═══════════════════════════════════════════════════════════════
 
-document.getElementById('btnDownloadPdf').addEventListener('click', () => {
+
   const btn = document.getElementById('btnDownloadPdf');
   
   // state.ebook.pdfUrl es la variable que n8n envía al final del flujo
@@ -1289,43 +1315,7 @@ document.getElementById('btnDownloadPdf').addEventListener('click', () => {
     showError('El archivo PDF se está terminando de procesar. Espera un momento.');
   }
 });
-
-// Generar PDF desde array de imágenes (Supabase Native)
-async function generatePdfFromImages(images) {
-  const btn = document.getElementById('btnDownloadPdf');
-  const origText = btn.innerHTML;
-  btn.innerHTML = '⏳ Generando PDF... 0/' + images.length;
-  btn.disabled = true;
-  
-  try {
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const pw = 210, ph = 297;
-    
-    for (let i = 0; i < images.length; i++) {
-      btn.innerHTML = '⏳ Generando PDF... ' + (i+1) + '/' + images.length;
-      if (i > 0) pdf.addPage();
-      
-      try {
-        const response = await fetch(images[i].url);
-        if (!response.ok) throw new Error('Fallo de red');
-        
-        const blob = await response.blob();
-        const dataUrl = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.onerror = () => reject(new Error('Lectura fallida'));
-          reader.readAsDataURL(blob);
-        });
-        
-        pdf.addImage(dataUrl, 'PNG', 0, 0, pw, ph);
-      } catch(e) {
-        console.warn('Imagen ' + (i+1) + ' falló:', e.message);
-        pdf.setFontSize(14);
-        pdf.text('Página ' + (i+1) + ' no disponible', 20, 140);
-      }
-    }
-    
+   
     pdf.save((state.ebook.title || 'VIVOgift_ebook').replace(/\s+/g, '_') + '.pdf');
     btn.innerHTML = '✅ ¡PDF Descargado!';
   } catch(err) {
