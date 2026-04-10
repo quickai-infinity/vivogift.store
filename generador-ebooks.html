@@ -497,33 +497,48 @@ textarea{resize:vertical;min-height:90px}
     </div>
   </div>
 
-  <<div class="panel" id="panel5">
+  <div class="panel" id="panel5">
     <div class="confirm-panel">
-      <div class="confirm-icon">🚀</div>
+      <div class="confirm-icon">🎉</div>
       <h2>¡Tu Historia está en Proceso!</h2>
-      <p>Estamos ilustrando y ensamblando tu libro en alta definición.</p>
+      <p>Estamos ilustrating y ensamblando tu libro en alta definición.</p>
       
       <div style="display:flex;gap:24px;justify-content:center;align-items:flex-start;flex-wrap:wrap;margin:24px 0 32px;">
         <div style="text-align:center;">
           <div id="ebookPreviewCover" style="width:200px;height:280px;margin:0 auto 12px;background:linear-gradient(145deg,#2a2520,#1a1815);border-radius:0 10px 10px 0;box-shadow:-4px 4px 20px rgba(0,0,0,.5);overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;">
             <span style="color:var(--text2);font-size:12px;">Portada</span>
           </div>
+          <p style="font-size:11px;color:var(--text2);font-family:var(--fd);">Click para ampliar</p>
         </div>
         
         <div style="text-align:left;max-width:340px;">
           <h3 style="font-family:var(--fd);font-size:18px;font-weight:800;margin-bottom:8px;color:var(--lime);" id="ebookResultTitle">-</h3>
           <div style="font-size:13px;color:var(--text2);line-height:1.6;">
-            <div style="margin-bottom:15px; padding:15px; background:var(--bg4); border-radius:var(--rs); border:1px solid var(--lime20); color:var(--text);">
-              ⚙️ <b>Estado:</b> Generando PDF y Galería...<br><br>
-              Esto puede tardar de <b>5 a 15 minutos</b>. No necesitas esperar aquí; tu libro aparecerá automáticamente en tu biblioteca.
+            <div>📖 <span id="ebookResultPages">10</span> páginas ilustradas</div>
+            <div>🎨 Estilo: <span id="ebookResultStyle">-</span></div>
+            <div>👤 Protagonista: <span id="ebookResultProtagonist">-</span></div>
+            
+            <div style="margin-top:15px; padding:15px; background:var(--bg4); border-radius:var(--rs); border:1px solid var(--lime20); color:var(--text);">
+              ⚙️ <b>Estado:</b> Procesando en el servidor...<br><br>
+              Tu libro aparecerá automáticamente en tu biblioteca en unos minutos.
             </div>
           </div>
-          <a href="/ebooks.html" class="btn-generate" style="text-decoration:none; display:block; text-align:center; background:var(--lime); color:var(--bg);">📁 Ir a Mis Ebooks</a>
         </div>
+      </div>
+
+      <div class="order-details" id="orderDetailsSection" style="display:none; margin-bottom: 20px;">
+        <h4>📦 Detalles del Pedido #<span id="orderNumber">VG-12345</span></h4>
+        <div class="order-row"><span>Libro:</span><span id="confirmTitle">-</span></div>
+        <div class="order-row"><span>Destinatario:</span><span id="confirmRecipient">-</span></div>
+      </div>
+
+      <div class="download-buttons">
+        <a href="/ebooks.html" class="btn-download-pdf" style="text-decoration:none;">📁 Ir a Mis Ebooks</a>
+        <button class="btn-generate" id="btnDownloadCoverFinal" style="max-width:240px;background:var(--bg4);border:1px solid #ffffff20;color:var(--text);font-size:12px;">⬇️ Descargar Portada</button>
       </div>
       
       <div style="margin-top:32px;">
-        <button class="btn-back" onclick="location.reload()" style="border-color:var(--text3);color:var(--text3);">✨ Crear otro nuevo</button>
+        <button class="btn-back" onclick="location.reload()" style="border-color:var(--lime);color:var(--lime);">✨ Crear otro nuevo</button>
       </div>
     </div>
 </div>
