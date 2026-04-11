@@ -7,7 +7,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
 <style>
-/* REUTILIZACIÓN DE TU PALETA DE COLORES EBOOKS */
 :root {
   --bg:#080808; --bg2:#0e0e0e; --bg3:#161616; --bg4:#1e1e1e; --bg5:#262626;
   --lime:#e8ff47; --lime10:#e8ff4718; --lime20:#e8ff4730;
@@ -15,9 +14,9 @@
   --r:14px; --rs:8px;
   --fd:'Syne',sans-serif; --fb:'DM Sans',sans-serif;
 }
-body { background:var(--bg); color:var(--text); font-family:var(--fb); min-height:100vh; margin:0; }
+body { background:var(--bg); color:var(--text); font-family:var(--fb); min-height:100vh; margin:0; overflow-x: hidden; }
 
-/* TU NAVEGACIÓN ORIGINAL */
+/* NAVEGACIÓN */
 .nav { position:fixed; top:0; left:0; right:0; z-index:100; padding:14px 24px; display:flex; justify-content:space-between; align-items:center; backdrop-filter:blur(24px); background:rgba(8,8,8,.85); border-bottom:1px solid #ffffff08; }
 .logo { display:flex; align-items:center; font-family:var(--fd); font-size:21px; font-weight:800; letter-spacing:-.5px; text-decoration:none; color:var(--text); }
 .logo-o { width:24px; height:24px; border:2px solid var(--lime); border-radius:50%; display:inline-flex; align-items:center; justify-content:center; margin:0 1px; }
@@ -28,7 +27,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--fb); min-heigh
 
 .main { padding:100px 20px 60px; max-width:1200px; margin:0 auto; }
 
-/* ESTRUCTURA DE PANELES CLONADA */
+/* PANELES */
 .create-panel { display:grid; grid-template-columns:1fr 400px; gap:40px; align-items:start; }
 @media(max-width:900px){ .create-panel { grid-template-columns:1fr; } }
 
@@ -40,27 +39,29 @@ label { display:block; font-size:11px; font-weight:600; color:var(--text2); marg
 input { width:100%; padding:12px 14px; background:var(--bg); border:1.5px solid #ffffff12; border-radius:var(--rs); color:var(--text); font-size:13px; outline:none; transition:.2s; }
 input:focus { border-color:var(--lime); }
 
-/* SELECTOR DE ESTILOS EBOOKS - CUADRÍCULA COMPLETA */
+/* SELECTOR DE ESTILOS */
 .style-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(100px, 1fr)); gap:10px; }
 .style-option { padding:16px 8px; background:var(--bg); border:1.5px solid #ffffff12; border-radius:var(--rs); cursor:pointer; text-align:center; transition:.2s; font-size:11px; font-weight:600; }
 .style-option.selected { border-color:var(--lime); background:var(--lime10); color:var(--lime); }
 .style-option .icon { font-size:24px; display:block; margin-bottom:6px; }
 
-/* PREVIEW 3D SIDEBAR */
+/* SIDEBAR PREVIEW */
 .preview-section { position:sticky; top:100px; }
 .viewer-card { background:var(--bg3); border:1px solid #ffffff10; border-radius:var(--r); padding:24px; text-align:center; }
-.viewer-container { width:100%; height:320px; background:var(--bg); border-radius:var(--rs); margin-bottom:20px; overflow:hidden; border:1px solid #ffffff08; position:relative; }
+.viewer-container { width:100%; height:320px; background:var(--bg); border-radius:var(--rs); margin-bottom:20px; overflow:hidden; border:1px solid #ffffff08; position:relative; display:flex; align-items:center; justify-content:center; }
 model-viewer { width:100%; height:100%; --poster-color: transparent; }
 
 .btn-generate { width:100%; padding:14px; background:var(--lime); color:var(--bg); font-family:var(--fd); font-size:13px; font-weight:800; border:none; border-radius:var(--rs); cursor:pointer; transition:.2s; text-transform:uppercase; }
 .btn-generate:hover { box-shadow:0 8px 30px #e8ff4725; transform:translateY(-2px); }
-.btn-generate.disabled { opacity:0.5; cursor:not-allowed; }
+.btn-generate:disabled { opacity:0.5; cursor:not-allowed; }
 
-/* LOADING OVERLAY EBOOKS */
+/* LOADING */
 .loading-overlay { position:fixed; inset:0; background:rgba(8,8,8,.95); z-index:3000; display:flex; flex-direction:column; align-items:center; justify-content:center; opacity:0; visibility:hidden; transition:.3s; }
 .loading-overlay.active { opacity:1; visibility:visible; }
 .loading-spinner { width:70px; height:70px; border-radius:50%; background:conic-gradient(from 0deg,transparent 20%,#00f3ff 40%,#ff00ea 70%,var(--lime) 100%); animation:spin 1.2s linear infinite; margin-bottom:20px; }
 @keyframes spin { to { transform:rotate(360deg); } }
+
+.hidden { display: none !important; }
 </style>
 </head>
 <body>
@@ -81,29 +82,23 @@ model-viewer { width:100%; height:100%; --poster-color: transparent; }
     
     <div class="form-section">
       <h2>🧊 Escultor 3D Mágico</h2>
-      <p style="font-size:13px; color:var(--text2); margin-bottom:28px;">Convertimos tu foto en una figura coleccionable de alta calidad con Meshy AI.</p>
+      <p style="font-size:13px; color:var(--text2); margin-bottom:28px;">Transformamos tu foto en una figura 3D de alta definición.</p>
 
       <div class="input-group">
         <label>📸 Sube tu Foto</label>
         <input type="file" id="3dPhotoInput" accept="image/*" style="cursor:pointer; border:1.5px dashed var(--lime20);">
-        <p style="font-size:10px; color:var(--text2); margin-top:8px;">Usa una foto de cuerpo completo, de frente y bien iluminada.</p>
+        <p id="fileNameDisplay" style="font-size:10px; color:var(--text2); margin-top:8px;">Usa una foto de cuerpo completo, de frente.</p>
       </div>
 
       <div class="input-group">
         <label>🎨 Estilo del Personaje</label>
         <div class="style-grid">
           <div class="style-option selected" data-style="original"><span class="icon">🖼️</span>Original</div>
-          
+          <div class="style-option" data-style="pixar"><span class="icon">🎬</span>3D Pixar</div>
+          <div class="style-option" data-style="anime"><span class="icon">🌸</span>Anime</div>
           <div class="style-option" data-style="comic"><span class="icon">💥</span>Cómic</div>
           <div class="style-option" data-style="acuarela"><span class="icon">🖌️</span>Acuarela</div>
-          <div class="style-option" data-style="pixar"><span class="icon">🎬</span>Pixar 3D</div>
-          <div class="style-option" data-style="anime"><span class="icon">🌸</span>Anime</div>
-          <div class="style-option" data-style="gts"><span class="icon">🤖</span>GTS Mecha</div>
-          <div class="style-option" data-style="halo3d"><span class="icon">🛸</span>Halo 3D</div>
-          <div class="style-option" data-style="dragonball"><span class="icon">🐉</span>DragonBall</div>
-          <div class="style-option" data-style="comics70"><span class="icon">🕰️</span>Vintage 70s</div>
           <div class="style-option" data-style="cyberpunk"><span class="icon">🦾</span>Cyberpunk</div>
-          <div class="style-option" data-style="steampunk"><span class="icon">⚙️</span>Steampunk</div>
           <div class="style-option" data-style="kawaii"><span class="icon">🎀</span>Kawaii</div>
           <div class="style-option" data-style="realistic"><span class="icon">📷</span>Realista</div>
         </div>
@@ -119,15 +114,15 @@ model-viewer { width:100%; height:100%; --poster-color: transparent; }
       <div class="viewer-card">
         <label>Previsualización 3D</label>
         <div class="viewer-container" id="3dContainer">
-          <div id="noModelMsg" style="padding-top:140px; color:var(--text3); font-size:12px;">Tu figura aparecerá aquí</div>
-          <model-viewer id="modelViewer" class="hidden" camera-controls auto-rotate shadow-intensity="1"></model-viewer>
+          <div id="noModelMsg" style="color:var(--text3); font-size:12px;">Tu figura aparecerá aquí</div>
+          <model-viewer id="modelViewer" class="hidden" camera-controls auto-rotate shadow-intensity="1" environment-image="neutral" exposure="1"></model-viewer>
         </div>
         
         <button class="btn-generate" id="btnGenerate3D">✨ Crear Figura 3D</button>
         
         <div id="actionBtns" class="hidden" style="margin-top:15px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-          <button class="btn-generate" style="background:var(--bg4); border:1px solid #ffffff10; font-size:11px;">⬇️ Descargar .GLB</button>
-          <button class="btn-generate" style="font-size:11px;">🖨️ Imprimir</button>
+          <a id="downloadGlb" href="#" download class="btn-generate" style="background:var(--bg4); border:1px solid #ffffff10; font-size:11px; text-decoration:none; display:flex; align-items:center; justify-content:center;">⬇️ .GLB</a>
+          <button class="btn-generate" style="font-size:11px;" onclick="alert('Funcionalidad de impresión en camino')">🖨️ Imprimir</button>
         </div>
       </div>
     </div>
@@ -138,13 +133,26 @@ model-viewer { width:100%; height:100%; --poster-color: transparent; }
 <div class="loading-overlay" id="loadingOverlay">
   <div class="loading-spinner"></div>
   <div style="font-family:var(--fd); font-size:18px;" id="loadingTitle">Preparando...</div>
-  <div style="color:var(--text2); font-size:13px; margin-top:8px;" id="loadingDesc"></div>
+  <div style="color:var(--text2); font-size:13px; margin-top:8px; text-align:center; max-width:300px;" id="loadingDesc"></div>
 </div>
 
 <script>
+// --- Configuraciones y Estado ---
+const WEBHOOK_URL = 'https://panel1.quickai.agency/webhook/generar-3d';
 let state3D = { style: 'original', photoBase64: null };
 
-// Selección de estilo
+const styleDescriptions = {
+  'original':  'keep the original appearance of the person in the photo',
+  'pixar':     '3D animation style character, Disney Pixar inspired, expressive features, cinematic lighting',
+  'anime':     'Studio Ghibli style anime, clean lines, hand-painted texture feel, charming atmosphere',
+  'comic':     'modern comic book style, bold outlines, vibrant flat colors, dynamic action pose',
+  'acuarela':  'ethereal watercolor illustration, soft pastel tones, delicate brush strokes',
+  'cyberpunk': 'cyberpunk aesthetic, neon accents, futuristic distopian clothing, synthwave colors',
+  'kawaii':    'adorable Japanese kawaii style, big sparkling eyes, pastel colors, chibi proportions',
+  'realistic': 'highly detailed photorealistic digital art, professional studio lighting, 8k resolution'
+};
+
+// --- Selección de Estilo ---
 document.querySelectorAll('.style-option').forEach(opt => {
   opt.addEventListener('click', () => {
     document.querySelectorAll('.style-option').forEach(o => o.classList.remove('selected'));
@@ -153,36 +161,82 @@ document.querySelectorAll('.style-option').forEach(opt => {
   });
 });
 
-// Lectura de imagen
+// --- Lector de Imagen ---
 document.getElementById('3dPhotoInput').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if(!file) return;
+  document.getElementById('fileNameDisplay').innerText = "✅ " + file.name;
   const reader = new FileReader();
   reader.onload = (event) => { state3D.photoBase64 = event.target.result; };
   reader.readAsDataURL(file);
 });
 
-// Acción de generar (Simulación Fase 1)
-document.getElementById('btnGenerate3D').addEventListener('click', () => {
+// --- Función Principal de Generación (REAL) ---
+async function start3DGeneration() {
   if(!state3D.photoBase64) return alert("Por favor, sube una foto primero.");
   
   const overlay = document.getElementById('loadingOverlay');
   const title = document.getElementById('loadingTitle');
   const desc = document.getElementById('loadingDesc');
+  const btn = document.getElementById('btnGenerate3D');
   
+  // 1. UI de Carga
   overlay.classList.add('active');
+  btn.disabled = true;
   
   if (state3D.style === 'original') {
-    title.innerText = "Subiendo imagen a Meshy AI...";
-    desc.innerText = "Creando figura 3D directa (sin estilización).";
+    title.innerText = "Subiendo imagen...";
+    desc.innerText = "Creando figura 3D directa desde tu foto. Meshy AI suele tardar 2-3 minutos.";
   } else {
-    title.innerText = "Aplicando estilo " + state3D.style + " via Atlas...";
-    desc.innerText = "Luego esculpiremos la figura en 3D (aprox. 3 min total).";
+    title.innerText = "Aplicando estilo " + state3D.style;
+    desc.innerText = "Primero Atlas Cloud estilizará tu imagen y luego Meshy la convertirá en 3D (Aprox. 4 min total).";
   }
-  
-  // Aquí llamaremos al Webhook de n8n en la siguiente fase
-  console.log("Enviando a n8n:", state3D);
-});
+
+  try {
+    // 2. Llamada al Webhook de n8n
+    const response = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: document.getElementById('3dCharName').value || "Mi_Figura_3D",
+        style: state3D.style,
+        styleDescription: styleDescriptions[state3D.style],
+        protagonistPhotoBase64: state3D.photoBase64
+      })
+    });
+
+    if (!response.ok) throw new Error("Error en el servidor");
+
+    const data = await response.json();
+
+    if (data.success && data.glbUrl) {
+      // 3. Éxito: Mostrar el Modelo
+      overlay.classList.remove('active');
+      document.getElementById('noModelMsg').classList.add('hidden');
+      
+      const viewer = document.getElementById('modelViewer');
+      viewer.src = data.glbUrl;
+      viewer.poster = data.thumbnail || "";
+      viewer.classList.remove('hidden');
+      
+      // Activar botones de descarga
+      document.getElementById('actionBtns').classList.remove('hidden');
+      document.getElementById('downloadGlb').href = data.glbUrl;
+      
+    } else {
+      throw new Error("No se pudo obtener el archivo 3D");
+    }
+
+  } catch (error) {
+    console.error("Error:", error);
+    alert("Hubo un problema al crear tu figura. Intenta de nuevo.");
+    overlay.classList.remove('active');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+document.getElementById('btnGenerate3D').addEventListener('click', start3DGeneration);
 </script>
 </body>
 </html>
