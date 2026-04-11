@@ -865,11 +865,11 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
         document.getElementById('loadingSub').textContent = msg.sub;
       }
     }
-  }, 2500); 
+  }, 25000); 
   
 try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 300000); 
+    const timeoutId = setTimeout(() => controller.abort(), 3000000); 
 
     await fetch(CONFIG.webhooks.ebook, {
       method: 'POST',
@@ -891,9 +891,11 @@ try {
   } catch (error) {
     console.log('[Crear Ebook] El servidor continúa procesando en segundo plano.');
   }
-
+// ═══════════════════════════════════════════════════════════════
+  // LÓGICA BLINDADA: PANTALLA FIJA CON BOTONES
+  // ═══════════════════════════════════════════════════════════════
   clearInterval(progressInterval);
-
+  
   if (barFill) {
     barFill.style.width = '100%';
     barFill.style.background = 'var(--lime)';
@@ -902,48 +904,17 @@ try {
 
   document.getElementById('loadingSpinner').style.display = 'none';
   document.getElementById('loadingText').textContent = '🎨 Ilustrando en alta definición...';
+  
+  // Borramos el setTimeout y el goToStep(5). 
+  // Ahora la pantalla de carga se convierte en la pantalla final de éxito.
   document.getElementById('loadingSub').innerHTML = 
-    'Tu libro es muy detallado y el proceso continúa en el servidor.<br>' +
-    '<b>Aparecerá en "Mis Ebooks" en unos 10 a 20 minutos.</b>';
+    'Tu libro es muy detallado y el proceso continúa en nuestro servidor de forma segura.<br>' +
+    '<span style="color:var(--lime); font-size:14px; font-weight:600;">Estará listo en tu biblioteca en unos 10 a 20 minutos.</span><br><br>' +
+    '<a href="/ebooks.html" style="display:inline-block; margin-top:20px; padding:14px 32px; background:var(--lime); color:var(--bg); font-family:var(--fd); font-size:14px; font-weight:800; border-radius:8px; text-decoration:none; text-transform:uppercase;">📁 Ir a Mis Ebooks</a>' +
+    '<div style="margin-top:20px;">' +
+    '<button onclick="location.reload()" style="background:transparent; border:none; color:var(--text2); text-decoration:underline; font-size:13px; cursor:pointer;">✨ Crear otro libro nuevo</button>' +
+    '</div>';
 
-  setTimeout(() => {
-    hideLoading();
-    const progContainer = document.getElementById('progressContainer');
-    if (progContainer) progContainer.style.display = 'none';
-
-    const titleEl = document.getElementById('ebookResultTitle');
-    if (titleEl) titleEl.textContent = state.ebook.title || '-';
-
-    const pagesEl = document.getElementById('ebookResultPages');
-    if (pagesEl) pagesEl.textContent = state.ebook.pages || '10';
-
-    const styleEl = document.getElementById('ebookResultStyle');
-    if (styleEl) styleEl.textContent = state.ebook.style || '-';
-
-    const protagEl = document.getElementById('ebookResultProtagonist');
-    if (protagEl) protagEl.textContent = state.ebook.protagonist || '-';
-
-    const coverEl = document.getElementById('ebookPreviewCover');
-    if (state.ebook.coverUrl && coverEl) {
-      coverEl.innerHTML = '';
-      const img = document.createElement('img');
-      img.src = state.ebook.coverUrl;
-      img.alt = 'Portada';
-      img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:0 10px 10px 0;';
-      coverEl.appendChild(img);
-
-      coverEl.onclick = () => {
-        const zImg = document.getElementById('zoomImage');
-        const zOverlay = document.getElementById('zoomOverlay');
-        if (zImg && zOverlay) {
-          zImg.src = state.ebook.coverUrl;
-          zOverlay.classList.add('active');
-        }
-      };
-    }
-
-    goToStep(5);
-  }, 4500);
 });
 // ═══════════════════════════════════════════════════════════════
 // PANEL 1: GENERAR DESCRIPCIÓN CON IA
