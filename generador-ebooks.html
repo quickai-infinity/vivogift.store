@@ -712,7 +712,6 @@ document.querySelectorAll('.style-option').forEach(opt => {
     document.querySelectorAll('.style-option').forEach(o => o.classList.remove('selected'));
     opt.classList.add('selected');
     state.ebook.style = opt.dataset.style;
-    document.getElementById('visualStyle').value = opt.dataset.style;
   });
 });
 
