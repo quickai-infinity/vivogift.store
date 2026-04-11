@@ -261,6 +261,12 @@ textarea{resize:vertical;min-height:90px}
         </div>
 
         <div class="input-group">
+           <label>📸 Foto del Protagonista ( Para personalizar su rostro)</label>
+           <input type="file" id="protagonistPhoto" accept="image/png, image/jpeg, image/jpg" style="padding: 8px; background: var(--bg); border: 1.5px dashed var(--lime20); border-radius: var(--rs); color: var(--text2); cursor: pointer; width: 100%; font-family: var(--fb); font-size: 12px;">
+           <p style="font-size: 10px; color: var(--text2); margin-top: 6px;">Sube una foto clara donde se vea bien el rostro (Máximo 2MB).</p>
+        </div>
+
+        <div class="input-group">
           <label style="display:flex;justify-content:space-between;align-items:center">
             Descripción
             <button type="button" id="btnMagicDesc" style="background:var(--lime10);color:var(--lime);border:1px solid var(--lime20);padding:4px 10px;border-radius:4px;font-size:10px;cursor:pointer;font-family:var(--fd)">✨ Generar con IA</button>
@@ -562,6 +568,7 @@ textarea{resize:vertical;min-height:90px}
   <img id="zoomImage" src="" alt="Portada ampliada">
   <div class="zoom-hint">Click en cualquier sitio para cerrar</div>
 </div>
+
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
@@ -883,7 +890,8 @@ try {
         style: state.ebook.style,
         age: state.ebook.age,
         pages: state.ebook.pages,
-        coverUrl: state.ebook.coverUrl
+        coverUrl: state.ebook.coverUrl,
+        protagonistPhotoBase64: state.ebook.protagonistPhotoBase64 || null
       })
     });
     
@@ -1243,6 +1251,28 @@ function downloadCoverImage(btnId) {
 
   img.src = imgUrl;
 }
+// ═══════════════════════════════════════════════════════════════
+// LECTOR DE FOTO DEL PROTAGONISTA
+// ═══════════════════════════════════════════════════════════════
+document.getElementById('protagonistPhoto').addEventListener('change', function(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // Validar que la foto no sea gigante (Límite 2MB)
+  if (file.size > 2 * 1024 * 1024) {
+    showError('La foto es muy pesada. Por favor sube una imagen de menos de 2MB.');
+    this.value = ''; // Limpiar el archivo
+    return;
+  }
+
+  // Leer la foto y convertirla a código Base64
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    state.ebook.protagonistPhotoBase64 = e.target.result;
+    console.log("✅ Foto procesada correctamente lista para enviar.");
+  };
+  reader.readAsDataURL(file);
+});
 </script>
 
 </body>
