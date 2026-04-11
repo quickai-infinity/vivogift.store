@@ -972,78 +972,71 @@ document.getElementById('btnGenerateEbook').addEventListener('click', async () =
       goToStep(5);
     }, 2000);
     
-  } catch (error) {
-    console.error('[Crear Ebook] Tiempo de espera agotado:', error);
+ } catch (error) {
+    console.error('[Crear Ebook] Tiempo de espera agotado o error:', error);
     clearInterval(progressInterval);
     
-    // 1. CAMBIO VISUAL: Mensaje de procesamiento en segundo plano
+    // 1. Mensaje visual de procesamiento en segundo plano
+    const barFill = document.getElementById('progressBarFill');
+    const percentText = document.getElementById('progressPercent');
+    if (barFill) {
+      barFill.style.width = '100%';
+      barFill.style.background = 'var(--lime)';
+    }
+    if (percentText) percentText.textContent = 'PROCESANDO EN SERVIDOR...';
+
     document.getElementById('loadingSpinner').style.display = 'none';
     document.getElementById('loadingText').textContent = '🎨 Ilustrando en alta definición...';
     document.getElementById('loadingSub').innerHTML = 
-      'Debido a la alta calidad de las ilustraciones, el proceso continúa en nuestro servidor.<br>' +
-      '<b>Tu libro aparecerá en "Mis Ebooks" en aproximadamente 5-10 minutos.</b><br>' +
-      'Puedes seguir navegando o cerrar esta ventana sin problemas.';
+      'Tu libro es muy detallado y el proceso continúa en el servidor.<br>' +
+      '<b>Aparecerá en "Mis Ebooks" en unos minutos.</b>';
     
-    // Alargar la barra visualmente al final
-    barFill.style.width = '100%';
-    barFill.style.background = 'var(--lime)';
-    percentText.textContent = 'PROCESANDO...';
-
-    // 2. CAMBIO PROFESIONAL: Rediseñar el Panel 5 para este caso
-    setTimeout(() => {
-       hideLoading();
-       // Modificamos el Panel 5 dinámicamente para que no sea un "éxito falso"
-       document.getElementById('panel5').innerHTML = `
-         <div class="confirm-panel">
-           <div class="confirm-icon">⏳</div>
-           <h2>¡Tu historia está en camino!</h2>
-           <p>Estamos generando las ilustraciones y el PDF final con máxima calidad.</p>
-           <div class="order-details" style="text-align:center; padding: 20px;">
-             <p>Este proceso toma unos minutos. Encontrarás tu libro listo para descargar en la sección de <b>Mis Ebooks</b> muy pronto.</p>
-           </div>
-           <div style="display:flex; gap:12px; justify-content:center; margin-top:24px;">
-             <a href="/ebooks.html" class="btn-download-pdf" style="text-decoration:none; background:var(--lime); color:var(--bg); font-weight:800; padding:14px 24px; border-radius:8px;">📁 Ir a Mis Ebooks</a>
-             <button onclick="location.reload()" class="btn-download-doc" style="padding:14px 24px; border-radius:8px; border:1.5px solid #ffffff20; background:transparent; color:var(--text); cursor:pointer;">✨ Crear otro Ebook</button>
-           </div>
-         </div>
-       `;
-       goToStep(5);
-    }, 6000);// Dejamos el mensaje de "procesando" unos segundos para que se lea bien 
-    barFill.style.width = '100%';
-    barFill.style.background = '#00ff00';
-    percentText.textContent = '100%';
-    document.getElementById('loadingSpinner').style.display = 'none';
-    document.getElementById('loadingText').textContent = '¡Tu ebook se está generando!';
-    document.getElementById('loadingSub').innerHTML = 
-      '📚 Tu libro se guardará automáticamente en <b>Mis Ebooks</b><br>' +
-      '<span style="font-size:12px;color:var(--text3);margin-top:8px;display:block;">' +
-      'La generación puede tomar hasta 4 minutos. Revisa la página en unos momentos.</span>';
-    
+    // 2. Cambio profesional al Panel 5 (SIN romper el HTML)
     setTimeout(() => {
       hideLoading();
-      document.getElementById('progressContainer').style.display = 'none';
-      document.getElementById('loadingSpinner').style.display = 'block';
-      barFill.style.background = 'linear-gradient(90deg, #ff00ff, #00ffff)';
+      const progContainer = document.getElementById('progressContainer');
+      if (progContainer) progContainer.style.display = 'none';
       
-      document.getElementById('ebookResultTitle').textContent = state.ebook.title || '-';
-      document.getElementById('ebookResultPages').textContent = state.ebook.pages || '10';
-      document.getElementById('ebookResultStyle').textContent = styleDescriptions[state.ebook.style] ? state.ebook.style : '-';
-      document.getElementById('ebookResultProtagonist').textContent = state.ebook.protagonist || '-';
+      // Llenamos los datos suavemente (esto evita el crash de pantalla negra)
+      const titleEl = document.getElementById('ebookResultTitle');
+      if (titleEl) titleEl.textContent = state.ebook.title || '-';
       
+      const pagesEl = document.getElementById('ebookResultPages');
+      if (pagesEl) pagesEl.textContent = state.ebook.pages || '10';
+      
+      const styleEl = document.getElementById('ebookResultStyle');
+      if (styleEl) styleEl.textContent = state.ebook.style || '-';
+      
+      const protagEl = document.getElementById('ebookResultProtagonist');
+      if (protagEl) protagEl.textContent = state.ebook.protagonist || '-';
+      
+      // Inyectamos la portada si ya existe
       const ebookCoverEl = document.getElementById('ebookPreviewCover');
-      if (state.ebook.coverUrl) {
+      if (state.ebook.coverUrl && ebookCoverEl) {
         const coverImg = document.createElement('img');
         coverImg.src = state.ebook.coverUrl;
-        coverImg.alt = 'Portada del Ebook';
+        coverImg.alt = 'Portada';
         coverImg.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:0 10px 10px 0;';
-        coverImg.onload = () => { ebookCoverEl.innerHTML = ''; ebookCoverEl.appendChild(coverImg); };
+        
+        coverImg.onload = () => { 
+          ebookCoverEl.innerHTML = ''; 
+          ebookCoverEl.appendChild(coverImg); 
+        };
+        
+        ebookCoverEl.onclick = () => {
+          const zImg = document.getElementById('zoomImage');
+          const zOverlay = document.getElementById('zoomOverlay');
+          if (zImg && zOverlay) {
+            zImg.src = state.ebook.coverUrl;
+            zOverlay.classList.add('active');
+          }
+        };
       }
       
       goToStep(5);
-    }, 4000);
+    }, 4500);
   }
 });
-
 // ═══════════════════════════════════════════════════════════════
 // PANEL 1: GENERAR DESCRIPCIÓN CON IA
 // ═══════════════════════════════════════════════════════════════
