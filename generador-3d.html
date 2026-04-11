@@ -37,14 +37,14 @@ body { background:var(--bg); color:var(--text); font-family:var(--fb); min-heigh
 
 .input-group { margin-bottom:18px; }
 label { display:block; font-size:11px; font-weight:600; color:var(--text2); margin-bottom:6px; text-transform:uppercase; font-family:var(--fd); }
-input, textarea { width:100%; padding:12px 14px; background:var(--bg); border:1.5px solid #ffffff12; border-radius:var(--rs); color:var(--text); font-size:13px; outline:none; transition:.2s; }
-input:focus, textarea:focus { border-color:var(--lime); }
+input { width:100%; padding:12px 14px; background:var(--bg); border:1.5px solid #ffffff12; border-radius:var(--rs); color:var(--text); font-size:13px; outline:none; transition:.2s; }
+input:focus { border-color:var(--lime); }
 
-/* SELECTOR DE ESTILOS EBOOKS */
-.style-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
-.style-option { padding:12px 6px; background:var(--bg); border:1.5px solid #ffffff12; border-radius:var(--rs); cursor:pointer; text-align:center; transition:.2s; font-size:10px; }
-.style-option.selected { border-color:var(--lime); background:var(--lime10); }
-.style-option .icon { font-size:20px; display:block; margin-bottom:4px; }
+/* SELECTOR DE ESTILOS EBOOKS - CUADRÍCULA COMPLETA */
+.style-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(100px, 1fr)); gap:10px; }
+.style-option { padding:16px 8px; background:var(--bg); border:1.5px solid #ffffff12; border-radius:var(--rs); cursor:pointer; text-align:center; transition:.2s; font-size:11px; font-weight:600; }
+.style-option.selected { border-color:var(--lime); background:var(--lime10); color:var(--lime); }
+.style-option .icon { font-size:24px; display:block; margin-bottom:6px; }
 
 /* PREVIEW 3D SIDEBAR */
 .preview-section { position:sticky; top:100px; }
@@ -54,6 +54,7 @@ model-viewer { width:100%; height:100%; --poster-color: transparent; }
 
 .btn-generate { width:100%; padding:14px; background:var(--lime); color:var(--bg); font-family:var(--fd); font-size:13px; font-weight:800; border:none; border-radius:var(--rs); cursor:pointer; transition:.2s; text-transform:uppercase; }
 .btn-generate:hover { box-shadow:0 8px 30px #e8ff4725; transform:translateY(-2px); }
+.btn-generate.disabled { opacity:0.5; cursor:not-allowed; }
 
 /* LOADING OVERLAY EBOOKS */
 .loading-overlay { position:fixed; inset:0; background:rgba(8,8,8,.95); z-index:3000; display:flex; flex-direction:column; align-items:center; justify-content:center; opacity:0; visibility:hidden; transition:.3s; }
@@ -80,21 +81,31 @@ model-viewer { width:100%; height:100%; --poster-color: transparent; }
     
     <div class="form-section">
       <h2>🧊 Escultor 3D Mágico</h2>
-      <p style="font-size:13px; color:var(--text2); margin-bottom:28px;">Convertimos tu foto en una figura coleccionable de alta calidad.</p>
+      <p style="font-size:13px; color:var(--text2); margin-bottom:28px;">Convertimos tu foto en una figura coleccionable de alta calidad con Meshy AI.</p>
 
       <div class="input-group">
         <label>📸 Sube tu Foto</label>
-        <input type="file" id="3dPhotoInput" accept="image/*" style="cursor:pointer; border:1px dashed var(--lime20);">
-        <p style="font-size:10px; color:var(--text2); margin-top:8px;">Usa una foto de cuerpo completo para mejores resultados en 3D.</p>
+        <input type="file" id="3dPhotoInput" accept="image/*" style="cursor:pointer; border:1.5px dashed var(--lime20);">
+        <p style="font-size:10px; color:var(--text2); margin-top:8px;">Usa una foto de cuerpo completo, de frente y bien iluminada.</p>
       </div>
 
       <div class="input-group">
         <label>🎨 Estilo del Personaje</label>
         <div class="style-grid">
-          <div class="style-option selected" data-style="pixar"><span class="icon">🎬</span><span class="name">3D Pixar</span></div>
-          <div class="style-option" data-style="anime"><span class="icon">🌸</span><span class="name">Anime</span></div>
-          <div class="style-option" data-style="realistic"><span class="icon">📷</span><span class="name">Realista</span></div>
-          <div class="style-option" data-style="comic"><span class="icon">💥</span><span class="name">Cómic</span></div>
+          <div class="style-option selected" data-style="original"><span class="icon">🖼️</span>Original</div>
+          
+          <div class="style-option" data-style="comic"><span class="icon">💥</span>Cómic</div>
+          <div class="style-option" data-style="acuarela"><span class="icon">🖌️</span>Acuarela</div>
+          <div class="style-option" data-style="pixar"><span class="icon">🎬</span>Pixar 3D</div>
+          <div class="style-option" data-style="anime"><span class="icon">🌸</span>Anime</div>
+          <div class="style-option" data-style="gts"><span class="icon">🤖</span>GTS Mecha</div>
+          <div class="style-option" data-style="halo3d"><span class="icon">🛸</span>Halo 3D</div>
+          <div class="style-option" data-style="dragonball"><span class="icon">🐉</span>DragonBall</div>
+          <div class="style-option" data-style="comics70"><span class="icon">🕰️</span>Vintage 70s</div>
+          <div class="style-option" data-style="cyberpunk"><span class="icon">🦾</span>Cyberpunk</div>
+          <div class="style-option" data-style="steampunk"><span class="icon">⚙️</span>Steampunk</div>
+          <div class="style-option" data-style="kawaii"><span class="icon">🎀</span>Kawaii</div>
+          <div class="style-option" data-style="realistic"><span class="icon">📷</span>Realista</div>
         </div>
       </div>
 
@@ -126,12 +137,12 @@ model-viewer { width:100%; height:100%; --poster-color: transparent; }
 
 <div class="loading-overlay" id="loadingOverlay">
   <div class="loading-spinner"></div>
-  <div style="font-family:var(--fd); font-size:18px;">Esculpiendo tu figura en 3D...</div>
-  <div style="color:var(--text2); font-size:13px; margin-top:8px;">Este proceso con Meshy AI toma unos 2-3 minutos</div>
+  <div style="font-family:var(--fd); font-size:18px;" id="loadingTitle">Preparando...</div>
+  <div style="color:var(--text2); font-size:13px; margin-top:8px;" id="loadingDesc"></div>
 </div>
 
 <script>
-let state3D = { style: 'pixar', photoBase64: null };
+let state3D = { style: 'original', photoBase64: null };
 
 // Selección de estilo
 document.querySelectorAll('.style-option').forEach(opt => {
@@ -145,6 +156,7 @@ document.querySelectorAll('.style-option').forEach(opt => {
 // Lectura de imagen
 document.getElementById('3dPhotoInput').addEventListener('change', function(e) {
   const file = e.target.files[0];
+  if(!file) return;
   const reader = new FileReader();
   reader.onload = (event) => { state3D.photoBase64 = event.target.result; };
   reader.readAsDataURL(file);
@@ -152,8 +164,21 @@ document.getElementById('3dPhotoInput').addEventListener('change', function(e) {
 
 // Acción de generar (Simulación Fase 1)
 document.getElementById('btnGenerate3D').addEventListener('click', () => {
-  if(!state3D.photoBase64) return alert("Sube una foto primero");
-  document.getElementById('loadingOverlay').classList.add('active');
+  if(!state3D.photoBase64) return alert("Por favor, sube una foto primero.");
+  
+  const overlay = document.getElementById('loadingOverlay');
+  const title = document.getElementById('loadingTitle');
+  const desc = document.getElementById('loadingDesc');
+  
+  overlay.classList.add('active');
+  
+  if (state3D.style === 'original') {
+    title.innerText = "Subiendo imagen a Meshy AI...";
+    desc.innerText = "Creando figura 3D directa (sin estilización).";
+  } else {
+    title.innerText = "Aplicando estilo " + state3D.style + " via Atlas...";
+    desc.innerText = "Luego esculpiremos la figura en 3D (aprox. 3 min total).";
+  }
   
   // Aquí llamaremos al Webhook de n8n en la siguiente fase
   console.log("Enviando a n8n:", state3D);
