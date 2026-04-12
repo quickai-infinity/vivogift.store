@@ -191,53 +191,64 @@ document.getElementById('3dPhotoInput').addEventListener('change', function(e) {
 
 // --- Función Principal de Generación (REAL) ---
 // 2. Llamada al Webhook de n8n (configurado para respuesta asíncrona)
-    try {
-      const response = await fetch(WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          // ... (todos tus datos actuales: user_id, title, style, photoBase64)
-          visualStyle: state3D.visualStyle,
-          styleDescription: styleDescriptions[state3D.visualStyle],
-          pageCount: state3D.pages,
-          coverUrl: state3D.photoUrl,
-          protagonistPhotoBase64: state3D.photoBase64
-        })
-      });
+   // --- Función Principal de Generación (REAL) ---
+async function start3DGeneration() {
+  // 1. Validar que haya foto y nombre
+  if (!state3D.photoBase64) {
+    alert("Por favor, sube una foto primero.");
+    return;
+  }
+  
+  // 2. Mostrar la pantalla de carga (usando el ID correcto de tu HTML)
+  document.getElementById('loadingOverlay').classList.add('active');
+  document.getElementById('loadingTitle').innerText = 'Preparando...';
+  document.getElementById('loadingDesc').innerText = '';
 
-      // NO esperamos la respuesta final del GLB. Esperamos una confirmación rápida de n8n.
-      const data = await response.json(); 
+  try {
+    // 3. Llamada al Webhook de n8n
+    const response = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: localStorage.getItem('user_id') || "a0695029-7973-45a8-b570-877292215c54",
+        title: document.getElementById('3dCharName').value || "Mi_Figura_3D",
+        visualStyle: state3D.style, 
+        styleDescription: styleDescriptions[state3D.style],
+        protagonistPhotoBase64: state3D.photoBase64
+      })
+    });
 
-      if (data.status === "received" || data.success) {
-        // --- AQUÍ ESTÁ EL CAMBIO DE UX SOLICITADO ---
-        
-        // 1. Ocultamos el estado de carga actual
-        document.getElementById('loadingState').classList.add('hidden');
-        
-        // 2. Mostramos un contenedor de éxito rápido (crea este ID en tu HTML antes o úsalo aquí)
-        const successMessageContainer = document.getElementById('successMessageContainer');
-        if (successMessageContainer) {
-          successMessageContainer.innerHTML = `
-            <div class="success-message">
-              <span class="icon">✅</span>
-              <h3>¡Su figura 3D se está desarrollando!</h3>
-              <p>Por favor, espere de 10 a 15 minutos.</p>
-              <p>Busque en su carpeta de "Mis Figuras 3D" para ver sus obras terminadas.</p>
-              <button class="btn-primary" onclick="window.location.href='/mis-figuras-3d.html'">Ir a Mis Figuras</button>
-            </div>
-          `;
-          successMessageContainer.classList.remove('hidden');
-        }
-        
-        // --- FIN DEL CAMBIO ---
-      } else {
-        throw new Error(data.message || "La generación falló.");
-      }
-    } catch (error) {
-      console.error("Error completo:", error);
-      document.getElementById('loadingText').innerText = 'Error al conectar con la IA.';
+    const data = await response.json(); 
+
+    if (data.status === "received" || data.success) {
+      // 4. Éxito: Ocultar carga y cambiar la tarjeta del visor por el mensaje de éxito
+      document.getElementById('loadingOverlay').classList.remove('active');
+      
+      const viewerCard = document.querySelector('.viewer-card');
+      viewerCard.innerHTML = `
+        <div style="padding: 40px 20px; text-align: center;">
+          <span style="font-size: 40px; display: block; margin-bottom: 15px;">✅</span>
+          <h3 style="font-family: var(--fd); font-size: 20px; margin-bottom: 10px;">¡Su figura 3D se está desarrollando!</h3>
+          <p style="color: var(--text2); font-size: 13px; margin-bottom: 25px;">Por favor, espere de 10 a 15 minutos.</p>
+          <a href="mis-figuras-3d.html" class="btn-generate" style="text-decoration: none; display: inline-block; width: 100%; box-sizing: border-box;">Ir a Mis Figuras</a>
+        </div>
+      `;
+    } else {
+      throw new Error(data.message || "La generación falló en el servidor.");
     }
+  } catch (error) {
+    console.error("Error completo:", error);
+    document.getElementById('loadingTitle').innerText = 'Error de conexión';
+    document.getElementById('loadingDesc').innerText = 'No se pudo conectar con la IA. Intenta de nuevo.';
+    
+    // Quitar la pantalla de carga después de 3 segundos para que el usuario pueda reintentar
+    setTimeout(() => { 
+      document.getElementById('loadingOverlay').classList.remove('active'); 
+    }, 9000);
+  }
+}
 
+// 5. Conectar el botón con la función recién creada
 document.getElementById('btnGenerate3D').addEventListener('click', start3DGeneration);
 </script>
 </body>
