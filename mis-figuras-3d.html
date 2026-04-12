@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mis Figuras 3D - VIVOgift</title>
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f9f9f9; color: #333; margin: 0; padding: 20px; }
+    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 15px; margin-bottom: 30px; }
+    h1 { margin: 0; color: #2c3e50; }
+    .btn-back { background: #eee; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; text-decoration: none; color: #333; }
+    
+    /* Grid de la Galería */
+    .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+    .card { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s; text-align: center; border: 1px solid #eee; }
+    .card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
+    .card-img { width: 100%; height: 250px; object-fit: cover; background: #f0f0f0; }
+    .card-content { padding: 15px; }
+    .card-title { font-weight: bold; margin: 0 0 10px 0; font-size: 1.1em; }
+    .card-style { font-size: 0.85em; color: #7f8c8d; margin-bottom: 15px; text-transform: uppercase;}
+    .btn-view { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; }
+    .btn-view:hover { background: #2980b9; }
+
+    /* Modal del Visor 3D */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center; }
+    .modal-content { background: white; padding: 20px; border-radius: 10px; width: 90%; max-width: 800px; position: relative; display: flex; flex-direction: column; align-items: center; }
+    .close-btn { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; background: none; border: none; color: #333; }
+    model-viewer { width: 100%; height: 60vh; background-color: #f4f4f4; border-radius: 8px; margin-top: 10px; }
+    .modal-actions { display: flex; gap: 15px; margin-top: 20px; width: 100%; justify-content: center; }
+    .btn-action { padding: 12px 25px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 1em; }
+    .btn-download { background: #2ecc71; color: white; }
+    .btn-print { background: #e67e22; color: white; }
+    
+    #loading { text-align: center; padding: 50px; color: #7f8c8d; font-size: 1.2em; }
+    #emptyState { text-align: center; padding: 50px; display: none; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Mi Carpeta de Figuras 3D</h1>
+    <a href="/generador-3d.html" class="btn-back">← Volver al Generador</a>
+  </header>
+
+  <div id="loading">Cargando tus obras maestras... ⏳</div>
+  
+  <div id="emptyState">
+    <h2>Aún no tienes figuras 3D</h2>
+    <p>Tus figuras aparecerán aquí cuando estén listas (recuerda que tardan de 10 a 15 minutos).</p>
+  </div>
+
+  <div class="grid-container" id="figuresGrid">
+    </div>
+
+  <div id="3dModal" class="modal">
+    <div class="modal-content">
+      <button class="close-btn" onclick="closeModal()">✖</button>
+      <h2 id="modalTitle">Cargando modelo...</h2>
+      
+      <model-viewer 
+        id="mainViewer" 
+        camera-controls 
+        auto-rotate 
+        shadow-intensity="1" 
+        exposure="1"
+        style="background-color: #e0e0e0;">
+      </model-viewer>
+
+      <div class="modal-actions">
+        <button class="btn-action btn-download" id="downloadBtn">📥 Descargar (.glb)</button>
+        </div>
+    </div>
+  </div>
+
+  <script>
+    // 1. CONFIGURA TU SUPABASE AQUÍ
+    const SUPABASE_URL = 'https://rtjgcpklpyolzsdjjtdb.supabase.co'; // <--- CAMBIA ESTO
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0amdjcGtscHlvbHpzZGpqdGRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NjI5NzMsImV4cCI6MjA4OTQzODk3M30.cXX0916XOXbe3DsR-rBV__9Boi4Pyh30z1g5LsJGpeY'; // <--- CAMBIA ESTO
+    
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // 2. Obtener el ID del usuario
+    const userId = localStorage.getItem('user_id') || "a0695029-7973-45a8-b570-877292215c54";
+
+    async function loadFigures() {
+      const grid = document.getElementById('figuresGrid');
+      const loading = document.getElementById('loading');
+      const emptyState = document.getElementById('emptyState');
+
+      try {
+        // Consultar la base de datos (asegúrate de que tu tabla se llame 'vivogift_figuras_3d')
+        const { data, error } = await supabase
+          .from('vivogift_figuras_3d')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        loading.style.display = 'none';
+
+        if (!data || data.length === 0) {
+          emptyState.style.display = 'block';
+          return;
+        }
+
+        // Crear las tarjetas para cada figura
+        data.forEach(figura => {
+          // Si Meshy falló en dar thumbnail, usamos una imagen genérica
+          const posterImg = figura.stilyzed_url || 'https://via.placeholder.com/250x250?text=Modelo+3D';
+          
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <img src="${posterImg}" class="card-img" alt="${figura.title}">
+            <div class="card-content">
+              <h3 class="card-title">${figura.title}</h3>
+              <p class="card-style">Estilo: ${figura.visual_style}</p>
+              <button class="btn-view" onclick="openModal('${figura.glb_url}', '${figura.title}', '${posterImg}')">
+                🔍 Ver e Interactuar
+              </button>
+            </div>
+          `;
+          grid.appendChild(card);
+        });
+
+      } catch (err) {
+        console.error('Error al cargar figuras:', err);
+        loading.innerHTML = 'Error al cargar las figuras. Revisa la consola.';
+      }
+    }
+
+    // Funciones del Modal
+    function openModal(glbUrl, title, poster) {
+      if (!glbUrl || glbUrl === 'null') {
+        alert("El archivo 3D aún se está generando o hubo un error. Intenta más tarde.");
+        return;
+      }
+
+      const modal = document.getElementById('3dModal');
+      const viewer = document.getElementById('mainViewer');
+      
+      document.getElementById('modalTitle').innerText = title;
+      
+      // Cargar el modelo en el visor
+      viewer.src = glbUrl;
+      viewer.poster = poster; // Imagen de carga
+      
+      // Configurar el botón de descarga
+      document.getElementById('downloadBtn').onclick = () => {
+        window.open(glbUrl, '_blank');
+      };
+
+      modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('3dModal');
+      const viewer = document.getElementById('mainViewer');
+      modal.style.display = 'none';
+      viewer.src = ""; // Limpiar memoria
+    }
+
+    // Cerrar modal al hacer clic fuera de la caja blanca
+    window.onclick = function(event) {
+      const modal = document.getElementById('3dModal');
+      if (event.target === modal) {
+        closeModal();
+      }
+    }
+
+    // Iniciar carga al abrir la página
+    loadFigures();
+  </script>
+</body>
+</html>
