@@ -190,8 +190,9 @@ document.getElementById('3dPhotoInput').addEventListener('change', function(e) {
 });
 
 // --- Función Principal de Generación (Asíncrona) ---
+// --- Función Principal de Generación (Asíncrona) ---
 async function start3DGeneration() {
-  // 1. Validar que haya foto
+  // 1. Validar que haya foto y nombre
   if (!state3D.photoBase64) {
     alert("Por favor, sube una foto de frente primero.");
     return;
