@@ -22,6 +22,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--fb); min-heigh
 .logo-o { width:24px; height:24px; border:2px solid var(--lime); border-radius:50%; display:inline-flex; align-items:center; justify-content:center; margin:0 1px; }
 .logo-o svg { width:9px; height:9px; fill:var(--lime); }
 .logo-gift { color:var(--lime); font-weight:300; font-size:19px; }
+.nav-links { display: flex; align-items: center; }
 .nav-links a { color:var(--text2); text-decoration:none; font-size:13px; transition:.2s; margin-left:20px; }
 .nav-links a:hover { color:var(--lime); }
 
@@ -74,6 +75,9 @@ model-viewer { width:100%; height:100%; --poster-color: transparent; }
     <a href="index.html">Inicio</a>
     <a href="generador-ebooks.html">Cuentos Mágicos</a>
     <a href="#" style="color:var(--lime)">✦ Figura 3D</a>
+    <a href="mis-figuras-3d.html" style="background:var(--bg3); padding:8px 14px; border-radius:6px; border:1px solid #ffffff20; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+      📁 Mis Figuras
+    </a>
   </div>
 </nav>
 
@@ -190,9 +194,8 @@ document.getElementById('3dPhotoInput').addEventListener('change', function(e) {
 });
 
 // --- Función Principal de Generación (Asíncrona) ---
-// --- Función Principal de Generación (Asíncrona) ---
 async function start3DGeneration() {
-  // 1. Validar que haya foto y nombre
+  // 1. Validar que haya foto
   if (!state3D.photoBase64) {
     alert("Por favor, sube una foto de frente primero.");
     return;
@@ -252,6 +255,10 @@ async function start3DGeneration() {
     }, 4000);
   }
 }
+
+// ESTA ES LA LÍNEA CRÍTICA QUE FALTABA
+document.getElementById('btnGenerate3D').addEventListener('click', start3DGeneration);
+
 </script>
 </body>
 </html>
