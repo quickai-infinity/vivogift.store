@@ -189,20 +189,18 @@ document.getElementById('3dPhotoInput').addEventListener('change', function(e) {
   reader.readAsDataURL(file);
 });
 
-// --- Función Principal de Generación (REAL) ---
-// 2. Llamada al Webhook de n8n (configurado para respuesta asíncrona)
-   // --- Función Principal de Generación (REAL) ---
+// --- Función Principal de Generación (Asíncrona) ---
 async function start3DGeneration() {
-  // 1. Validar que haya foto y nombre
+  // 1. Validar que haya foto
   if (!state3D.photoBase64) {
-    alert("Por favor, sube una foto primero.");
+    alert("Por favor, sube una foto de frente primero.");
     return;
   }
   
-  // 2. Mostrar la pantalla de carga (usando el ID correcto de tu HTML)
+  // 2. Mostrar la pantalla de carga inicial
   document.getElementById('loadingOverlay').classList.add('active');
-  document.getElementById('loadingTitle').innerText = 'Preparando...';
-  document.getElementById('loadingDesc').innerText = '';
+  document.getElementById('loadingTitle').innerText = 'Enviando al taller mágico...';
+  document.getElementById('loadingDesc').innerText = 'Conectando con la IA...';
 
   try {
     // 3. Llamada al Webhook de n8n
@@ -221,16 +219,22 @@ async function start3DGeneration() {
     const data = await response.json(); 
 
     if (data.status === "received" || data.success) {
-      // 4. Éxito: Ocultar carga y cambiar la tarjeta del visor por el mensaje de éxito
+      // 4. Éxito: Ocultamos el 'Cargando...'
       document.getElementById('loadingOverlay').classList.remove('active');
       
+      // 5. Transformamos la caja negra (viewer-card) en el mensaje final
       const viewerCard = document.querySelector('.viewer-card');
       viewerCard.innerHTML = `
-        <div style="padding: 40px 20px; text-align: center;">
-          <span style="font-size: 40px; display: block; margin-bottom: 15px;">✅</span>
-          <h3 style="font-family: var(--fd); font-size: 20px; margin-bottom: 10px;">¡Su figura 3D se está desarrollando!</h3>
-          <p style="color: var(--text2); font-size: 13px; margin-bottom: 25px;">Por favor, espere de 10 a 15 minutos.</p>
-          <a href="mis-figuras-3d.html" class="btn-generate" style="text-decoration: none; display: inline-block; width: 100%; box-sizing: border-box;">Ir a Mis Figuras</a>
+        <div style="padding: 40px 20px; text-align: center; background: var(--bg3); border-radius: var(--r);">
+          <span style="font-size: 50px; display: block; margin-bottom: 20px;">✨</span>
+          <h3 style="font-family: var(--fd); font-size: 22px; margin-bottom: 15px; color: var(--lime);">¡Figura en proceso!</h3>
+          <p style="color: var(--text); font-size: 14px; margin-bottom: 30px; line-height: 1.6;">
+            Tu figura 3D se está esculpiendo y pintando. <br><br>
+            <strong style="color: white; font-size: 16px;">Aparecerá en unos 15 a 20 minutos en tu carpeta de figuras.</strong>
+          </p>
+          <a href="mis-figuras-3d.html" class="btn-generate" style="text-decoration: none; display: flex; justify-content: center; align-items: center; gap: 10px;">
+            📁 Ir a Mis Figuras
+          </a>
         </div>
       `;
     } else {
@@ -238,18 +242,15 @@ async function start3DGeneration() {
     }
   } catch (error) {
     console.error("Error completo:", error);
-    document.getElementById('loadingTitle').innerText = 'Error de conexión';
-    document.getElementById('loadingDesc').innerText = 'No se pudo conectar con la IA. Intenta de nuevo.';
+    document.getElementById('loadingTitle').innerText = 'Error de red';
+    document.getElementById('loadingDesc').innerText = 'Asegúrate de que n8n esté activo y tenga el CORS configurado.';
     
-    // Quitar la pantalla de carga después de 3 segundos para que el usuario pueda reintentar
+    // Quitar la pantalla de carga después de 4 segundos
     setTimeout(() => { 
       document.getElementById('loadingOverlay').classList.remove('active'); 
-    }, 9000);
+    }, 4000);
   }
 }
-
-// 5. Conectar el botón con la función recién creada
-document.getElementById('btnGenerate3D').addEventListener('click', start3DGeneration);
 </script>
 </body>
 </html>
