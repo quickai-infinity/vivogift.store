@@ -190,69 +190,53 @@ document.getElementById('3dPhotoInput').addEventListener('change', function(e) {
 });
 
 // --- Función Principal de Generación (REAL) ---
-async function start3DGeneration() {
-  if(!state3D.photoBase64) return alert("Por favor, sube una foto primero.");
-  
-  const overlay = document.getElementById('loadingOverlay');
-  const title = document.getElementById('loadingTitle');
-  const desc = document.getElementById('loadingDesc');
-  const btn = document.getElementById('btnGenerate3D');
-  
-  // 1. UI de Carga
-  overlay.classList.add('active');
-  btn.disabled = true;
-  
-  if (state3D.style === 'original') {
-    title.innerText = "Subiendo imagen...";
-    desc.innerText = "Creando figura 3D directa desde tu foto. Meshy AI suele tardar 2-3 minutos.";
-  } else {
-    title.innerText = "Aplicando estilo " + state3D.style;
-    desc.innerText = "Primero Atlas Cloud estilizará tu imagen y luego Meshy la convertirá en 3D (Aprox. 4 min total).";
-  }
+// 2. Llamada al Webhook de n8n (configurado para respuesta asíncrona)
+    try {
+      const response = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          // ... (todos tus datos actuales: user_id, title, style, photoBase64)
+          visualStyle: state3D.visualStyle,
+          styleDescription: styleDescriptions[state3D.visualStyle],
+          pageCount: state3D.pages,
+          coverUrl: state3D.photoUrl,
+          protagonistPhotoBase64: state3D.photoBase64
+        })
+      });
 
-  try {
-    // 2. Llamada al Webhook de n8n
-    const response = await fetch(WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        user_id: localStorage.getItem('user_id') || "a0695029-7973-45a8-b570-877292215c54", // <-- LÍNEA CLAVE
-        title: document.getElementById('3dCharName').value || "Mi_Figura_3D",
-        style: state3D.style,
-        styleDescription: styleDescriptions[state3D.style],
-        protagonistPhotoBase64: state3D.photoBase64
-      })
-    });
-    if (!response.ok) throw new Error("Error en el servidor");
+      // NO esperamos la respuesta final del GLB. Esperamos una confirmación rápida de n8n.
+      const data = await response.json(); 
 
-    const data = await response.json();
-
-    if (data.success && data.glbUrl) {
-      // 3. Éxito: Mostrar el Modelo
-      overlay.classList.remove('active');
-      document.getElementById('noModelMsg').classList.add('hidden');
-      
-      const viewer = document.getElementById('modelViewer');
-      viewer.src = data.glbUrl;
-      viewer.poster = data.thumbnail || "";
-      viewer.classList.remove('hidden');
-      
-      // Activar botones de descarga
-      document.getElementById('actionBtns').classList.remove('hidden');
-      document.getElementById('downloadGlb').href = data.glbUrl;
-      
-    } else {
-      throw new Error("No se pudo obtener el archivo 3D");
+      if (data.status === "received" || data.success) {
+        // --- AQUÍ ESTÁ EL CAMBIO DE UX SOLICITADO ---
+        
+        // 1. Ocultamos el estado de carga actual
+        document.getElementById('loadingState').classList.add('hidden');
+        
+        // 2. Mostramos un contenedor de éxito rápido (crea este ID en tu HTML antes o úsalo aquí)
+        const successMessageContainer = document.getElementById('successMessageContainer');
+        if (successMessageContainer) {
+          successMessageContainer.innerHTML = `
+            <div class="success-message">
+              <span class="icon">✅</span>
+              <h3>¡Su figura 3D se está desarrollando!</h3>
+              <p>Por favor, espere de 10 a 15 minutos.</p>
+              <p>Busque en su carpeta de "Mis Figuras 3D" para ver sus obras terminadas.</p>
+              <button class="btn-primary" onclick="window.location.href='/mis-figuras-3d.html'">Ir a Mis Figuras</button>
+            </div>
+          `;
+          successMessageContainer.classList.remove('hidden');
+        }
+        
+        // --- FIN DEL CAMBIO ---
+      } else {
+        throw new Error(data.message || "La generación falló.");
+      }
+    } catch (error) {
+      console.error("Error completo:", error);
+      document.getElementById('loadingText').innerText = 'Error al conectar con la IA.';
     }
-
-  } catch (error) {
-    console.error("Error:", error);
-    alert("Hubo un problema al crear tu figura. Intenta de nuevo.");
-    overlay.classList.remove('active');
-  } finally {
-    btn.disabled = false;
-  }
-}
 
 document.getElementById('btnGenerate3D').addEventListener('click', start3DGeneration);
 </script>
