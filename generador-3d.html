@@ -93,17 +93,25 @@ model-viewer { width:100%; height:100%; --poster-color: transparent; }
       <div class="input-group">
         <label>🎨 Estilo del Personaje</label>
         <div class="style-grid">
-          <div class="style-option selected" data-style="original"><span class="icon">🖼️</span>Original</div>
-          <div class="style-option" data-style="pixar"><span class="icon">🎬</span>3D Pixar</div>
-          <div class="style-option" data-style="anime"><span class="icon">🌸</span>Anime</div>
-          <div class="style-option" data-style="comic"><span class="icon">💥</span>Cómic</div>
-          <div class="style-option" data-style="acuarela"><span class="icon">🖌️</span>Acuarela</div>
-          <div class="style-option" data-style="cyberpunk"><span class="icon">🦾</span>Cyberpunk</div>
-          <div class="style-option" data-style="kawaii"><span class="icon">🎀</span>Kawaii</div>
-          <div class="style-option" data-style="realistic"><span class="icon">📷</span>Realista</div>
+          <div class="style-option selected" data-style="original"><span class="icon">🖼️</span><span class="name">Original</span></div>
+          <div class="style-option" data-style="comic"><span class="icon">💥</span><span class="name">Cómic</span></div>
+          <div class="style-option" data-style="acuarela"><span class="icon">🎨</span><span class="name">Acuarela</span></div>
+          <div class="style-option" data-style="pixar"><span class="icon">🎬</span><span class="name">3D Pixar</span></div>
+          <div class="style-option" data-style="anime"><span class="icon">🌸</span><span class="name">Anime Ghibli</span></div>
+          <div class="style-option" data-style="gts"><span class="icon">🤖</span><span class="name">GTS Mecha</span></div>
+          <div class="style-option" data-style="halo3d"><span class="icon">🎮</span><span class="name">3D Halo</span></div>
+          <div class="style-option" data-style="dragonball"><span class="icon">⚡</span><span class="name">Dragon Ball</span></div>
+          <div class="style-option" data-style="comics70"><span class="icon">📰</span><span class="name">Comics 70-80</span></div>
+          <div class="style-option" data-style="cyberpunk"><span class="icon">🌆</span><span class="name">Cyberpunk</span></div>
+          <div class="style-option" data-style="steampunk"><span class="icon">⚙️</span><span class="name">Steampunk</span></div>
+          <div class="style-option" data-style="kawaii"><span class="icon">🍡</span><span class="name">Kawaii</span></div>
+          <div class="style-option" data-style="realistic"><span class="icon">📷</span><span class="name">Realista</span></div>
+          <div class="style-option" data-style="hyperreal"><span class="icon">👁️</span><span class="name">Hiperrealista</span></div>
+          <div class="style-option" data-style="vangogh"><span class="icon">🌌</span><span class="name">Noche Estrellada</span></div>
+          <div class="style-option" data-style="picasso"><span class="icon">🔺</span><span class="name">Cubismo</span></div>
+          <div class="style-option" data-style="dali"><span class="icon">⏱️</span><span class="name">Surrealista</span></div>
+          <div class="style-option" data-style="magia"><span class="icon">🪄</span><span class="name">Academia Magia</span></div>
         </div>
-      </div>
-
       <div class="input-group">
         <label>🏷️ Nombre de la Figura</label>
         <input type="text" id="3dCharName" placeholder="Ej: Mi Guerrero Mágico">
@@ -142,14 +150,24 @@ const WEBHOOK_URL = 'https://panel1.quickai.agency/webhook/generar-3d';
 let state3D = { style: 'original', photoBase64: null };
 
 const styleDescriptions = {
-  'original':  'keep the original appearance of the person in the photo',
-  'pixar':     '3D animation style character, Disney Pixar inspired, expressive features, cinematic lighting',
-  'anime':     'Studio Ghibli style anime, clean lines, hand-painted texture feel, charming atmosphere',
-  'comic':     'modern comic book style, bold outlines, vibrant flat colors, dynamic action pose',
-  'acuarela':  'ethereal watercolor illustration, soft pastel tones, delicate brush strokes',
-  'cyberpunk': 'cyberpunk aesthetic, neon accents, futuristic distopian clothing, synthwave colors',
-  'kawaii':    'adorable Japanese kawaii style, big sparkling eyes, pastel colors, chibi proportions',
-  'realistic': 'highly detailed photorealistic digital art, professional studio lighting, 8k resolution'
+  'original':   'keep the original appearance of the person in the photo, photorealistic, exact likeness',
+  'comic':      'modern comic book style, bold outlines, vibrant flat colors, dynamic superhero pose',
+  'acuarela':   'ethereal watercolor illustration, soft pastel tones, delicate brush strokes',
+  'pixar':      '3D animation style character, Disney Pixar inspired, expressive features, cinematic lighting',
+  'anime':      'Studio Ghibli style anime character, clean lines, charming atmosphere, detailed clothing',
+  'gts':        'giant robot mecha anime style, detailed mechanical armor parts, Gundam aesthetic, sci-fi',
+  'halo3d':     'Halo video game 3D style, futuristic sci-fi armor, Spartan aesthetic, dramatic lighting',
+  'dragonball': 'Dragon Ball Z anime style, spiky hair, ki energy aura, martial arts gi, intense expression',
+  'comics70':   'vintage 70s-80s comic book style, halftone dot patterns, retro color palette, classic superhero',
+  'cyberpunk':  'cyberpunk aesthetic, futuristic dystopian clothing, neon accents, synthwave colors',
+  'steampunk':  'victorian steampunk style, brass and copper gears, vintage goggles and mechanical fashion',
+  'kawaii':     'adorable Japanese kawaii style, big sparkling eyes, pastel colors, chibi proportions',
+  'realistic':  'highly detailed photorealistic digital art, professional studio lighting, 8k resolution',
+  'hyperreal':  'hyper-realistic macro photography, extremely precise human facial details, real skin texture',
+  'vangogh':    'post-impressionist painting style like Van Gogh, thick swirling brushstrokes, vibrant oil colors',
+  'picasso':    'abstract cubist art style, broken geometric shapes, bold primary colors, avant-garde design',
+  'dali':       'surrealist dreamlike painting style, bizarre elements, melting clocks aesthetic, deep magical symbolism',
+  'magia':      'cinematic fantasy magic school style, wizard robes, glowing wand, dark and mysterious lighting'
 };
 
 // --- Selección de Estilo ---
