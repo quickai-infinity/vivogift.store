@@ -216,13 +216,13 @@ async function start3DGeneration() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        user_id: localStorage.getItem('user_id') || "a0695029-7973-45a8-b570-877292215c54", // <-- LÍNEA CLAVE
         title: document.getElementById('3dCharName').value || "Mi_Figura_3D",
         style: state3D.style,
         styleDescription: styleDescriptions[state3D.style],
         protagonistPhotoBase64: state3D.photoBase64
       })
     });
-
     if (!response.ok) throw new Error("Error en el servidor");
 
     const data = await response.json();
