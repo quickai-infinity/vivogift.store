@@ -328,10 +328,12 @@ textarea{resize:vertical;min-height:90px}
 // ═══════════════════════════════════════════════════════════════
 const CONFIG = {
   webhooks: {
-    // Usamos el MISMO webhook de quickAI.io que en generador-ebooks.html
+    // Webhooks compartidos con el flujo principal
     ebook:       'https://panel1.quickai.agency/webhook/generar-ebook',
     previewCover:'https://panel1.quickai.agency/webhook/preview-cover',
-    description: 'https://panel1.quickai.agency/webhook/generar-descripcion'
+    
+    // NUEVO: Webhook exclusivo para la descripción de cuadernos didácticos
+    description: 'https://panel1.quickai.agency/webhook/generar/descripcion/didactica'
   }
 };
 
