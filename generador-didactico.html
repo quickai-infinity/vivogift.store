@@ -431,34 +431,61 @@ document.getElementById('protagonistPhoto').addEventListener('change', function(
 // ═══════════════════════════════════════════════════════════════
 // GENERAR TRAMA DE ACTIVIDADES (IA)
 // ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// GENERAR TRAMA DE ACTIVIDADES CON IA (Contextualizado)
+// ═══════════════════════════════════════════════════════════════
 document.getElementById('btnMagicDesc').addEventListener('click', async () => {
   const title = document.getElementById('storyTitle').value.trim();
-  if (!title) { showError('Escribe una temática primero.'); return; }
+  const activitySelect = document.getElementById('activityType');
+  const activityText = activitySelect.options[activitySelect.selectedIndex].text;
+  const age = document.getElementById('childAge').value;
+  
+  if (!title) { 
+    showError('Escribe primero la temática (título) para que la IA sepa de qué tratará el cuaderno.'); 
+    return; 
+  }
   
   const btn = document.getElementById('btnMagicDesc');
   const textarea = document.getElementById('storyDescription');
-  btn.textContent = '⏳ Redactando...'; btn.disabled = true;
   
+  btn.textContent = '⏳ Pensando...'; 
+  btn.disabled = true;
+  
+  // Construimos un "Contexto Didáctico" para que la IA de n8n no se pierda
+  const promptContext = {
+    title: title,
+    protagonist: document.getElementById('protagonistName').value.trim() || 'el protagonista',
+    activityType: activityText, // Enviamos el nombre del ejercicio (ej: "Laberintos")
+    age: age,
+    style: state.ebook.style,
+    instruction: `Genera una sinopsis creativa para un cuaderno didáctico. El tema es "${title}" y el tipo de ejercicio principal son "${activityText}". No escribas un cuento pasivo, escribe una trama donde el protagonista necesite resolver estos retos para avanzar.`
+  };
+
   try {
     const response = await fetch(CONFIG.webhooks.description, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: "Libro de ejercicios interactivo: " + title,
-        protagonist: document.getElementById('protagonistName').value.trim() || 'el protagonista',
-        style: state.ebook.style
-      })
+      body: JSON.stringify(promptContext)
     });
+    
     if (response.ok) {
       const rawText = await response.text();
       try {
         const data = JSON.parse(rawText);
+        // Priorizamos el campo 'text' o el texto plano que devuelva tu flujo de n8n
         textarea.value = data.text || data.output || rawText;
-      } catch { textarea.value = rawText; }
+      } catch {
+        textarea.value = rawText;
+      }
+    } else {
+      showError('El servidor de IA no respondió. Revisa la conexión con n8n.');
     }
-  } catch (err) { showError('Error de conexión.'); }
-  
-  btn.textContent = '✨ Generar Trama con IA'; btn.disabled = false;
+  } catch (err) {
+    showError('Error de red al intentar generar la trama.');
+  } finally {
+    btn.textContent = '✨ Generar Trama con IA';
+    btn.disabled = false;
+  }
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -532,21 +559,74 @@ document.getElementById('btnGenerateEbook').addEventListener('click', () => {
 document.getElementById('btnFormat').addEventListener('click', async () => {
   const baseTitle = document.getElementById('storyTitle').value.trim();
   const baseDesc = document.getElementById('storyDescription').value.trim();
-  const activityType = document.getElementById('activityType').value;
+  const activitySelect = document.getElementById('activityType');
+  const activityType = activitySelect.options[activitySelect.selectedIndex].text;
+  const activityValue = activitySelect.value;
   
-  // INYECCIÓN DE PROMPT ESTRICTA AL BACKEND DE N8N
-  // Esto fuerza al nodo Gemini en n8n a estructurar la respuesta como actividades
-  // sin modificar los parámetros del webhook ni el render en Atlas (mantiene color y estilo).
-  const didacticInstruction = `\n\n[INSTRUCCIÓN OBLIGATORIA]: Este NO es un cuento tradicional. Es un LIBRO DIDÁCTICO Y DE ACTIVIDADES INTERACTIVO. Las ilustraciones y la narrativa deben integrar ejercicios donde se requiera: ${activityType}. En la descripción visual de la escena (sceneDescription), DEBES exigir que el reto se vea físicamente en la imagen (ej: un camino en forma de laberinto en el suelo, números flotando en alta calidad, letras para trazar en una pizarra o muro). Mantén la resolución fotorrealista/3D a TODO COLOR sin restricciones, pero el diseño debe permitir interacción o resolución visual del problema.`;
+  if (!baseTitle || !baseDesc) { 
+    showError('Completa temática y descripción en el paso 1.'); 
+    goToStep(1); 
+    return; 
+  }
 
-  state.ebook.title = baseTitle;
-  state.ebook.protagonist = document.getElementById('protagonistName').value.trim();
-  state.ebook.description = baseDesc + didacticInstruction;
+  // DICCIONARIO DE DIRECTIVAS DIDÁCTICAS POR TIPO DE EJERCICIO
+  // Cada prompt fuerza la integración de la historia, las burbujas de diálogo y el diseño visual.
+  const exerciseDirectives = {
+    "laberintos para resolver visualmente": `
+      MANDATO CRÍTICO DE LABERINTOS:
+      La narrativa debe ser una mini-historia de exploración. En cada página, el protagonista enfrenta un obstáculo que solo se supera cruzando un camino enredado.
+      - Burbujas de diálogo: Los personajes DEBEN hablar en cada página dando pistas ("¡Mira, el camino correcto está por las rocas amarillas!", "¿Por dónde debemos ir ahora?").
+      - Diseño Visual (sceneDescription): Exige explícitamente que se dibuje un LABERINTO FÍSICO Y CLARO en la escena (ej. un laberinto de setos, un camino de baldosas flotantes, pasillos en una cueva). El laberinto debe ser visible desde una perspectiva que permita al lector trazar la salida con un lápiz.`,
+      
+    "figuras para rellenar y contar": `
+      MANDATO CRÍTICO DE CONTEO Y FIGURAS:
+      La narrativa es una mini-historia de recolección o descubrimiento. El protagonista necesita encontrar elementos específicos para avanzar.
+      - Burbujas de diálogo: Los personajes interactúan contando o preguntando cantidades ("¡Necesitamos encontrar 5 estrellas brillantes!", "¿Cuántas manzanas ves en el árbol?").
+      - Diseño Visual (sceneDescription): Exige que se dibujen múltiples elementos idénticos dispersos por la escena para que el niño los cuente. Incluye también figuras delineadas (con contornos claros) integradas en el entorno, pensadas para que el niño las coloree o rellene posteriormente.`,
+      
+    "letras para trazar y aprender el abecedario": `
+      MANDATO CRÍTICO DE TRAZO DE LETRAS:
+      La narrativa se centra en la magia de las palabras. El protagonista descubre letras gigantes o runas antiguas en su entorno.
+      - Burbujas de diálogo: Los personajes deben mencionar la letra de la que trata la página ("¡Mira, una enorme letra 'A' de árbol!", "Ayúdame a seguir la forma de esta letra mágica").
+      - Diseño Visual (sceneDescription): Exige que el elemento central de la imagen sea una LETRA GIGANTE (o palabra corta) dibujada con líneas punteadas gruesas o como un surco brillante en el suelo/pared, diseñada específicamente para que el niño siga el trazo con un lápiz.`,
+      
+    "problemas matemáticos visuales simples": `
+      MANDATO CRÍTICO DE MATEMÁTICAS BÁSICAS:
+      La narrativa plantea pequeños dilemas cotidianos o mágicos que requieren sumar o restar elementos visuales.
+      - Burbujas de diálogo: Los personajes plantean el problema directamente al lector ("Si tenemos 3 pociones y encontramos 2 más, ¿cuántas tenemos?", "¡Ayuda! Necesitamos dividir estas monedas").
+      - Diseño Visual (sceneDescription): Exige agrupaciones claras de objetos. Si el problema es de suma, dibuja un grupo de objetos separados de otro grupo. Debe haber espacios visuales claros o pizarras en el fondo de la imagen con números físicos o símbolos matemáticos (+, -, =) integrados en la arquitectura o el paisaje.`,
+      
+    "mezcla de laberintos, trazos y buscar objetos escondidos": `
+      MANDATO CRÍTICO DE DINÁMICA MIXTA:
+      La narrativa es una aventura épica con múltiples fases. Cada página alterna entre buscar objetos ocultos, seguir caminos (laberintos) y seguir patrones.
+      - Burbujas de diálogo: Los personajes deben romper la cuarta pared y pedir ayuda directa al lector ("¡Encuentra la llave escondida en esta página!", "Cuidado, guíanos por el laberinto seguro").
+      - Diseño Visual (sceneDescription): Alterna los retos por página. Página 1: Escena muy densa con objetos camuflados. Página 2: Un laberinto claro trazado en el suelo. Página 3: Patrones o formas punteadas para seguir. La calidad de imagen debe ser fotorrealista/3D, pero con zonas claramente definidas para la interacción del niño.`
+  };
+
+  // Seleccionamos la directiva correspondiente, si no coincide, usamos una por defecto.
+  const specificDirective = exerciseDirectives[activityValue] || exerciseDirectives["mezcla de laberintos, trazos y buscar objetos escondidos"];
+
+  // Construcción del Prompt Final Inyectado
+  const finalDescription = `
+${baseDesc}
+
+[INSTRUCCIONES DE SISTEMA - LIBRO DIDÁCTICO]
+No escribas un cuento de lectura pasiva. Este es un CUADERNO DE ACTIVIDADES INTERACTIVO. 
+Tipo de ejercicio seleccionado: ${activityType}.
+
+${specificDirective}
+
+REGLA ABSOLUTA: Las ilustraciones generadas DEBEN mantener el estilo visual solicitado (Pixar, Cómic, Fotorrealista, etc.) a TODO COLOR, pero la composición de la imagen DEBE integrar el ejercicio físico (el laberinto, las letras punteadas, los objetos a contar) para que el libro sea utilizable al imprimirse.`;
+
+  state.ebook.title = "Cuaderno Didáctico: " + baseTitle;
+  state.ebook.protagonist = document.getElementById('protagonistName').value.trim() || 'Lector';
+  state.ebook.description = finalDescription;
   state.ebook.pages = parseInt(document.getElementById('pageCount').value);
   state.ebook.age = document.getElementById('childAge').value;
 
+  // Actualizamos la UI
   document.getElementById('loadingText').textContent = 'Estructurando los ejercicios...';
-  document.getElementById('loadingSub').textContent = 'Calculando trayectorias y gráficos...';
+  document.getElementById('loadingSub').textContent = 'Calculando trayectorias y gráficos en Atlas...';
   document.getElementById('loadingOverlay').classList.add('active');
   document.getElementById('progressContainer').style.display = 'block';
   
@@ -554,7 +634,8 @@ document.getElementById('btnFormat').addEventListener('click', async () => {
   const percentText = document.getElementById('progressPercent');
   
   let currentProgress = 0;
-  barFill.style.width = '0%'; percentText.textContent = '0%';
+  barFill.style.width = '0%'; 
+  percentText.textContent = '0%';
   
   const progressInterval = setInterval(() => {
     if (currentProgress < 90) {
@@ -566,8 +647,9 @@ document.getElementById('btnFormat').addEventListener('click', async () => {
   
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 min timeout en cliente
+    const timeoutId = setTimeout(() => controller.abort(), 300000); 
     
+    // Enviamos el payload al webhook de n8n
     await fetch(CONFIG.webhooks.ebook, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -575,7 +657,7 @@ document.getElementById('btnFormat').addEventListener('click', async () => {
       body: JSON.stringify({
         title: state.ebook.title,
         protagonist: state.ebook.protagonist,
-        description: state.ebook.description,
+        description: state.ebook.description, 
         styleDescription: styleDescriptions[state.ebook.style],
         style: state.ebook.style,
         age: state.ebook.age,
@@ -591,7 +673,7 @@ document.getElementById('btnFormat').addEventListener('click', async () => {
 
   clearInterval(progressInterval);
   hideLoading();
-  goToStep(3); // Pantalla de éxito final
+  goToStep(3); 
 });
 </script>
 </body>
