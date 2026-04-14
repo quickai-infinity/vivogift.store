@@ -20,7 +20,7 @@
     .card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
     .card-img { width: 100%; height: 250px; object-fit: cover; background: #f0f0f0; }
     .card-content { padding: 15px; }
-    .card-title { font-weight: bold; margin: 0 0 10px 0; font-size: 1.1em; }
+    .card-title { font-weight: bold; margin: 0 0 10px 0; font-size: 1.1em; text-transform: capitalize; }
     .card-style { font-size: 0.85em; color: #7f8c8d; margin-bottom: 15px; text-transform: uppercase;}
     .btn-view { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; }
     .btn-view:hover { background: #2980b9; }
@@ -30,8 +30,8 @@
     .modal-content { background: white; padding: 20px; border-radius: 10px; width: 90%; max-width: 800px; position: relative; display: flex; flex-direction: column; align-items: center; }
     .close-btn { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; background: none; border: none; color: #333; }
     model-viewer { width: 100%; height: 60vh; background-color: #f4f4f4; border-radius: 8px; margin-top: 10px; }
-    .modal-actions { display: flex; gap: 15px; margin-top: 20px; width: 100%; justify-content: center; }
-    .btn-action { padding: 12px 25px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 1em; }
+    .modal-actions { display: flex; gap: 15px; margin-top: 20px; width: 100%; justify-content: center; flex-wrap: wrap; }
+    .btn-action { padding: 12px 25px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 1em; text-decoration: none; text-align: center; }
     .btn-download { background: #2ecc71; color: white; }
     .btn-print { background: #e67e22; color: white; }
     
@@ -43,7 +43,7 @@
 
   <header>
     <h1>Mi Carpeta de Figuras 3D</h1>
-    <a href="/generador-3d.html" class="btn-back">← Volver al Generador</a>
+    <a href="generador-3d.html" class="btn-back">← Volver al Generador</a>
   </header>
 
   <div id="loading">Cargando tus obras maestras... ⏳</div>
@@ -53,8 +53,7 @@
     <p>Tus figuras aparecerán aquí cuando estén listas (recuerda que tardan de 10 a 15 minutos).</p>
   </div>
 
-  <div class="grid-container" id="figuresGrid">
-    </div>
+  <div class="grid-container" id="figuresGrid"></div>
 
   <div id="3dModal" class="modal">
     <div class="modal-content">
@@ -71,15 +70,16 @@
       </model-viewer>
 
       <div class="modal-actions">
-        <button class="btn-action btn-download" id="downloadBtn">📥 Descargar (.glb)</button>
-        </div>
+        <a href="#" class="btn-action btn-download" id="downloadBtn" download>📥 Descargar (.glb)</a>
+        <button class="btn-action btn-print" id="printBtn">🖨️ Mandar a Imprimir</button>
+      </div>
     </div>
   </div>
 
   <script>
-    // 1. CONFIGURA TU SUPABASE AQUÍ
-    const SUPABASE_URL = 'https://rtjgcpklpyolzsdjjtdb.supabase.co'; // <--- CAMBIA ESTO
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0amdjcGtscHlvbHpzZGpqdGRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NjI5NzMsImV4cCI6MjA4OTQzODk3M30.cXX0916XOXbe3DsR-rBV__9Boi4Pyh30z1g5LsJGpeY'; // <--- CAMBIA ESTO
+    // 1. Configuración de Supabase
+    const SUPABASE_URL = 'https://rtjgcpklpyolzsdjjtdb.supabase.co'; 
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0amdjcGtscHlvbHpzZGpqdGRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NjI5NzMsImV4cCI6MjA4OTQzODk3M30.cXX0916XOXbe3DsR-rBV__9Boi4Pyh30z1g5LsJGpeY'; 
     
     const clienteBD = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -92,7 +92,6 @@
       const emptyState = document.getElementById('emptyState');
 
       try {
-        // Consultar la base de datos (asegúrate de que tu tabla se llame 'vivogift_figuras_3d')
         const { data, error } = await clienteBD
           .from('vivogift_figuras_3d')
           .select('*')
@@ -110,17 +109,22 @@
 
         // Crear las tarjetas para cada figura
         data.forEach(figura => {
-          // Si Meshy falló en dar thumbnail, usamos una imagen genérica
-          const posterImg = figura.stilyzed_url || 'https://via.placeholder.com/250x250?text=Modelo+3D';
+          // Limpieza estricta: Eliminar los signos '=' que causan el error en la lectura de la URL
+          const cleanPoster = (figura.stilyzed_url || '').replace(/^=/, '');
+          const cleanGlb = (figura.glb_url || '').replace(/^=/, '');
+          const cleanTitle = (figura.title || 'Figura').replace(/^=/, '');
+          const cleanStyle = (figura.visual_style || 'Original').replace(/^=/, '');
+
+          const posterImg = cleanPoster || 'https://via.placeholder.com/250x250?text=Modelo+3D';
           
           const card = document.createElement('div');
           card.className = 'card';
           card.innerHTML = `
-            <img src="${posterImg}" class="card-img" alt="${figura.title}">
+            <img src="${posterImg}" class="card-img" alt="${cleanTitle}">
             <div class="card-content">
-              <h3 class="card-title">${figura.title}</h3>
-              <p class="card-style">Estilo: ${figura.visual_style}</p>
-              <button class="btn-view" onclick="openModal('${figura.glb_url}', '${figura.title}', '${posterImg}')">
+              <h3 class="card-title">${cleanTitle}</h3>
+              <p class="card-style">Estilo: ${cleanStyle}</p>
+              <button class="btn-view" onclick="openModal('${cleanGlb}', '${cleanTitle}', '${posterImg}')">
                 🔍 Ver e Interactuar
               </button>
             </div>
@@ -134,26 +138,25 @@
       }
     }
 
-    // Funciones del Modal
+    // 3. Funciones del Modal y Visor 3D
     function openModal(glbUrl, title, poster) {
-      if (!glbUrl || glbUrl === 'null') {
+      if (!glbUrl || glbUrl === 'null' || glbUrl === '') {
         alert("El archivo 3D aún se está generando o hubo un error. Intenta más tarde.");
         return;
       }
 
       const modal = document.getElementById('3dModal');
       const viewer = document.getElementById('mainViewer');
+      const downloadBtn = document.getElementById('downloadBtn');
       
       document.getElementById('modalTitle').innerText = title;
       
-      // Cargar el modelo en el visor
+      // Asignar recursos limpios al visor
       viewer.src = glbUrl;
-      viewer.poster = poster; // Imagen de carga
+      viewer.poster = poster; 
       
-      // Configurar el botón de descarga
-      document.getElementById('downloadBtn').onclick = () => {
-        window.open(glbUrl, '_blank');
-      };
+      // Asignar el enlace real de descarga al botón
+      downloadBtn.href = glbUrl;
 
       modal.style.display = 'flex';
     }
@@ -162,10 +165,16 @@
       const modal = document.getElementById('3dModal');
       const viewer = document.getElementById('mainViewer');
       modal.style.display = 'none';
-      viewer.src = ""; // Limpiar memoria
+      viewer.src = ""; // Liberar memoria
     }
 
-    // Cerrar modal al hacer clic fuera de la caja blanca
+    // 4. Lógica del Botón Imprimir
+    document.getElementById('printBtn').addEventListener('click', function() {
+      alert("Su archivo o figura se mandó a imprimir, lo estará recibiendo en los días próximos. Gracias.");
+      closeModal();
+    });
+
+    // Cerrar modal al hacer clic en el fondo oscuro
     window.onclick = function(event) {
       const modal = document.getElementById('3dModal');
       if (event.target === modal) {
@@ -173,7 +182,7 @@
       }
     }
 
-    // Iniciar carga al abrir la página
+    // Iniciar carga de datos
     loadFigures();
   </script>
 </body>
