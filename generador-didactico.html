@@ -196,15 +196,24 @@ textarea{resize:vertical;min-height:90px}
         <div class="input-group">
           <label>Calidad y Estilo Visual (Se mantiene el render 3D a color)</label>
           <div class="style-grid">
-            <div class="style-option" data-style="comic"><span class="icon">💥</span><span class="name">Cómic</span></div>
-            <div class="style-option" data-style="acuarela"><span class="icon">🎨</span><span class="name">Acuarela</span></div>
-            <div class="style-option selected" data-style="pixar"><span class="icon">🎬</span><span class="name">3D Pixar</span></div>
-            <div class="style-option" data-style="anime"><span class="icon">🌸</span><span class="name">Anime Ghibli</span></div>
-            <div class="style-option" data-style="kawaii"><span class="icon">🍡</span><span class="name">Kawaii</span></div>
-            <div class="style-option" data-style="realistic"><span class="icon">📷</span><span class="name">Realista</span></div>
-            <div class="style-option" data-style="hyperreal"><span class="icon">👁️</span><span class="name">Hiperrealista</span></div>
-            <div class="style-option" data-style="magia"><span class="icon">🪄</span><span class="name">Academia</span></div>
-          </div>
+          <div class="style-option" data-style="comic"><span class="icon">💥</span><span class="name">Cómic</span></div>
+          <div class="style-option" data-style="acuarela"><span class="icon">🎨</span><span class="name">Acuarela</span></div>
+          <div class="style-option selected" data-style="pixar"><span class="icon">🎬</span><span class="name">3D Pixar</span></div>
+          <div class="style-option" data-style="anime"><span class="icon">🌸</span><span class="name">Anime Ghibli</span></div>
+          <div class="style-option" data-style="gts"><span class="icon">🤖</span><span class="name">GTS Mecha</span></div>
+          <div class="style-option" data-style="halo3d"><span class="icon">🎮</span><span class="name">3D Halo</span></div>
+          <div class="style-option" data-style="dragonball"><span class="icon">⚡</span><span class="name">Dragon Ball</span></div>
+          <div class="style-option" data-style="comics70"><span class="icon">📰</span><span class="name">Comics 70-80</span></div>
+          <div class="style-option" data-style="cyberpunk"><span class="icon">🌆</span><span class="name">Cyberpunk</span></div>
+          <div class="style-option" data-style="steampunk"><span class="icon">⚙️</span><span class="name">Steampunk</span></div>
+          <div class="style-option" data-style="kawaii"><span class="icon">🍡</span><span class="name">Kawaii</span></div>
+          <div class="style-option" data-style="realistic"><span class="icon">📷</span><span class="name">Realista</span></div>
+          <div class="style-option" data-style="hyperreal"><span class="icon">👁️</span><span class="name">Hiperrealista</span></div>
+          <div class="style-option" data-style="vangogh"><span class="icon">🌌</span><span class="name">N. Estrellada</span></div>
+          <div class="style-option" data-style="picasso"><span class="icon">🔺</span><span class="name">Cubismo</span></div>
+          <div class="style-option" data-style="dali"><span class="icon">⏱️</span><span class="name">Surrealista</span></div>
+          <div class="style-option" data-style="magia"><span class="icon">🪄</span><span class="name">A. Magia</span></div>
+        </div>
         </div>
 
         <div class="row-2">
@@ -341,14 +350,23 @@ let state = {
 };
 
 const styleDescriptions = {
-  'comic':      'estilo cómic moderno, colores vibrantes, contornos gruesos y definidos',
-  'acuarela':   'ilustración suave en acuarela, tonos pastel, pinceladas delicadas',
-  'pixar':      'estilo animación 3D tipo Pixar y Disney, personajes expresivos, iluminación rica',
-  'anime':      'estilo anime de Studio Ghibli, fondos mágicos y detallados',
-  'kawaii':     'estilo kawaii japonés adorable, colores pastel, proporciones chibi',
-  'realistic':  'arte digital fotorrealista, texturas detalladas, iluminación natural',
-  'hyperreal':  'fotografía hiperrealista 8k, detalles precisos, textura real, iluminación de estudio',
-  'magia':      'estilo fantasía cinematográfica tipo escuela de magos, iluminación mágica'
+  'comic':      'estilo cómic moderno, colores vibrantes, contornos gruesos y definidos, poses dinámicas de acción',
+  'acuarela':   'ilustración suave en acuarela, tonos pastel, pinceladas delicadas, atmósfera etérea y soñadora',
+  'pixar':      'estilo animación 3D tipo Pixar y Disney, personajes expresivos, iluminación rica y cinematográfica',
+  'anime':      'estilo anime de Studio Ghibli, fondos mágicos y detallados, atmósfera encantadora, iluminación suave',
+  'gts':        'estilo anime de robots gigantes mecha, diseños mecánicos detallados, escala épica, poses dinámicas, ciencia ficción tipo Gundam o Evangelion',
+  'halo3d':     'estilo videojuego 3D tipo Halo, estética futurista de ciencia ficción, armaduras y armas detalladas, iluminación dramática, batallas épicas',
+  'dragonball': 'estilo anime Dragon Ball Z, poses de acción dinámicas, auras de energía y ataques de ki, pelo en punta, expresiones intensas',
+  'comics70':   'estilo cómic vintage años 70-80, puntos de trama halftone, paleta de colores retro, estética clásica de superhéroes, sensación nostálgica',
+  'cyberpunk':  'estética cyberpunk con neones, ciudad futurista distópica, calles bajo la lluvia, pantallas holográficas, colores synthwave',
+  'steampunk':  'estilo steampunk victoriano, maquinaria de bronce y cobre, engranajes y vapor, moda vintage, fantasía industrial',
+  'kawaii':     'estilo kawaii japonés adorable, ojos grandes y brillantes, colores pastel, proporciones chibi, expresiones tiernas',
+  'realistic':  'arte digital fotorrealista, texturas detalladas, iluminación natural, composición cinematográfica, personajes realistas',
+  'hyperreal':  'fotografía hiperrealista 8k, detalles faciales humanos extremadamente precisos, textura de piel real, iluminación de estudio fotográfico profesional, lente macro',
+  'vangogh':    'estilo pintura postimpresionista tipo Van Gogh, pinceladas gruesas y arremolinadas, colores intensos, cielos estrellados vibrantes, textura de óleo sobre lienzo',
+  'picasso':    'estilo arte cubista abstracto, perspectivas múltiples, formas geométricas rotas, colores primarios audaces, diseño vanguardista de galería de arte',
+  'dali':       'estilo pintura surrealista onírica, paisajes de ensueño extraños, perspectivas infinitas, elementos derretidos o flotantes, simbolismo mágico profundo',
+  'magia':      'estilo fantasía cinematográfica tipo escuela de magos ingleses, castillos antiguos y oscuros, varitas brillantes, uniformes escolares de hechicería, lechuzas, iluminación misteriosa y mágica'
 };
 
 function showLoading(text, sub) {
