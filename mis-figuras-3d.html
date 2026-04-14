@@ -81,7 +81,7 @@
     const SUPABASE_URL = 'https://rtjgcpklpyolzsdjjtdb.supabase.co'; // <--- CAMBIA ESTO
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0amdjcGtscHlvbHpzZGpqdGRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NjI5NzMsImV4cCI6MjA4OTQzODk3M30.cXX0916XOXbe3DsR-rBV__9Boi4Pyh30z1g5LsJGpeY'; // <--- CAMBIA ESTO
     
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const clienteBD = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // 2. Obtener el ID del usuario
     const userId = localStorage.getItem('user_id') || "a0695029-7973-45a8-b570-877292215c54";
@@ -93,7 +93,7 @@
 
       try {
         // Consultar la base de datos (asegúrate de que tu tabla se llame 'vivogift_figuras_3d')
-        const { data, error } = await supabase
+        const { data, error } = await clienteBD
           .from('vivogift_figuras_3d')
           .select('*')
           .eq('user_id', userId)
